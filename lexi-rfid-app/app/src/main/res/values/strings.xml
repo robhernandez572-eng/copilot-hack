@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LEXI RFID NFC Reader</string>
+    <string name="action_about">About</string>
+    <string name="action_clear">Clear All</string>
+</resources>

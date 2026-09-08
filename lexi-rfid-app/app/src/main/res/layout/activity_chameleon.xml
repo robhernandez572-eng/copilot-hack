@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1A1A2E">
+
+    <!-- Device status bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#16213E">
+
+        <TextView
+            android:id="@+id/tvDeviceInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="No device connected"
+            android:textColor="#29B6F6"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:gravity="center_vertical"
+            android:padding="4dp"/>
+
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scan USB"
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
+
+    </LinearLayout>
+
+    <!-- Quick command buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="6dp"
+        android:background="#0F3460">
+
+        <Button
+            android:id="@+id/btnCmdVersion"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:text="VERSION"
+            android:textSize="11sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnCmdHelp"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:text="HELP"
+            android:textSize="11sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnCmdUid"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:text="UID?"
+            android:textSize="11sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnCmdConfig"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:text="CONFIG?"
+            android:textSize="11sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Terminal output -->
+    <TextView
+        android:id="@+id/tvTerminal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0D0D0D"
+        android:fontFamily="monospace"
+        android:textColor="#00FF41"
+        android:textSize="12sp"
+        android:padding="8dp"
+        android:scrollbars="vertical"
+        android:text="LEXI RFID / Chameleon USB Terminal\n-----------------------------------\nConnect your device via USB-OTG adapter,\nthen tap [Scan USB] to detect it.\n\nChameleon commands:\n  VERSION      - firmware info\n  CONFIG?      - list modes\n  CONFIG=MF_CLASSIC_1K  - emulate MIFARE 1K\n  UID?         - read UID\n  UID=AABBCCDD - set UID\n  UPLOAD       - upload card dump\n  DOWNLOAD     - download card dump\n  RESET        - reboot device\n\n" />
+
+    <!-- Command input -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#16213E">
+
+        <EditText
+            android:id="@+id/etCommand"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Type command..."
+            android:textColor="#FFFFFF"
+            android:background="#1A1A2E"
+            android:padding="8dp"
+            android:fontFamily="monospace"
+            android:textSize="13sp"
+            android:inputType="text"
+            android:imeOptions="actionSend"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/btnSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Send" />
+
+    </LinearLayout>
+</LinearLayout>
