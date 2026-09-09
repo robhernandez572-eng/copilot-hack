@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_scanner"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="NFC Scanner" />
+    <item
+        android:id="@+id/nav_library"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Card Library" />
+    <item
+        android:id="@+id/nav_usb"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="USB Device" />
+</menu>
