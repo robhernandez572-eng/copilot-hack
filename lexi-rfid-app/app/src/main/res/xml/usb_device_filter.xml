@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Silicon Labs CP210x -->
+    <usb-device vendor-id="4292" product-id="60000" />  <!-- CP2102/CP2109 0x10C4:0xEA60 -->
+    <usb-device vendor-id="4292" product-id="60016" />  <!-- CP2104        0x10C4:0xEA70 -->
+    <usb-device vendor-id="4292" product-id="60017" />  <!-- CP2108        0x10C4:0xEA71 -->
+    <usb-device vendor-id="4292" product-id="60032" />  <!-- CP2110        0x10C4:0xEA80 -->
+    <usb-device vendor-id="4292" product-id="60048" />  <!-- CP2112        0x10C4:0xEA90 -->
+
+    <!-- Qinheng CH340/CH341 -->
+    <usb-device vendor-id="6790" product-id="29987" />  <!-- CH340  0x1A86:0x7523 -->
+    <usb-device vendor-id="6790" product-id="21795" />  <!-- CH341  0x1A86:0x5523 -->
+    <usb-device vendor-id="6790" product-id="21778" />  <!-- CH341A 0x1A86:0x5512 -->
+    <usb-device vendor-id="6790" product-id="21972" />  <!-- CH9102 0x1A86:0x55D4 -->
+
+    <!-- FTDI -->
+    <usb-device vendor-id="1027" product-id="24577" />  <!-- FT232  0x0403:0x6001 -->
+    <usb-device vendor-id="1027" product-id="24592" />  <!-- FT2232 0x0403:0x6010 -->
+    <usb-device vendor-id="1027" product-id="24593" />  <!-- FT4232 0x0403:0x6011 -->
+    <usb-device vendor-id="1027" product-id="24596" />  <!-- FT232H 0x0403:0x6014 -->
+    <usb-device vendor-id="1027" product-id="24597" />  <!-- FT230X 0x0403:0x6015 -->
+
+    <!-- Prolific PL2303 -->
+    <usb-device vendor-id="1659" product-id="8963" />   <!-- PL2303 0x067B:0x2303 -->
+
+    <!-- Chameleon Mini / Ultra -->
+    <usb-device vendor-id="5840" product-id="1202" />   <!-- Chameleon Mini  0x16D0:0x04B2 -->
+    <usb-device vendor-id="5840" product-id="1730" />   <!-- Chameleon Ultra 0x16D0:0x06C2 -->
+
+    <!-- Atmel CDC-ACM -->
+    <usb-device vendor-id="1003" product-id="9220" />   <!-- Atmel 0x03EB:0x2404 -->
+</resources>

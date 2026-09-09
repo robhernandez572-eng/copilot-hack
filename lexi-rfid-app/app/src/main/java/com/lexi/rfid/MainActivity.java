@@ -134,6 +134,8 @@ public class MainActivity extends AppCompatActivity {
         updateEmptyView();
         showTab(0);
         handleIntent(getIntent());
+        // Auto-scan for already-connected USB devices on startup
+        scanUsb();
     }
 
     private void showTab(int index) {
@@ -269,6 +271,17 @@ public class MainActivity extends AppCompatActivity {
     private void handleIntent(Intent intent) {
         if (intent == null) return;
         String action = intent.getAction();
+        if (android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            android.hardware.usb.UsbDevice dev =
+                intent.getParcelableExtra(android.hardware.usb.UsbManager.EXTRA_DEVICE);
+            if (dev != null) {
+                usbDeviceManager.requestPermissionAndConnect(dev);
+                BottomNavigationView nav = findViewById(R.id.bottomNav);
+                nav.setSelectedItemId(R.id.nav_usb);
+                showTab(2);
+            }
+            return;
+        }
         if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
                 || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
                 || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {

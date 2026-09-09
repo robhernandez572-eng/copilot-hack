@@ -103,6 +103,11 @@ public class UsbDeviceManager {
                 } else {
                     if (dev != null) mainHandler.post(() -> listener.onPermissionDenied(dev));
                 }
+            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (dev != null && classify(dev) != DeviceType.UNKNOWN) {
+                    requestPermissionAndConnect(dev);
+                }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 if (dev != null && connectedDevice != null &&
@@ -123,6 +128,7 @@ public class UsbDeviceManager {
     public void register() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         ContextCompat.registerReceiver(context, usbReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
