@@ -16,6 +16,8 @@ public class CardData {
     private String timestamp;
     private int atqa;
     private byte sak;
+    private String notes = "";
+    private String category = "General";
 
     public CardData(String uid, String rawData, CardType cardType, String technology) {
         this.uid = uid;
@@ -39,6 +41,11 @@ public class CardData {
     public void setAtqa(int atqa) { this.atqa = atqa; }
     public byte getSak() { return sak; }
     public void setSak(byte sak) { this.sak = sak; }
+    public String getNotes() { return notes != null ? notes : ""; }
+    public void setNotes(String notes) { this.notes = notes != null ? notes : ""; }
+    public String getCategory() { return category != null ? category : "General"; }
+    public void setCategory(String category) { this.category = category != null ? category : "General"; }
+    public void setRawData(String rawData) { this.rawData = rawData != null ? rawData : ""; }
 
     public String getTypeLabel() {
         switch (cardType) {

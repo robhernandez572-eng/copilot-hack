@@ -32,7 +32,7 @@
             android:id="@+id/btnWriteToTag"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             android:text="✏  Write to NFC Tag"
             android:textSize="15sp"
             android:backgroundTint="#1565C0" />
@@ -42,11 +42,41 @@
             android:id="@+id/btnCancelWrite"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             android:text="Cancel Write"
             android:textSize="14sp"
             android:visibility="gone"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <!-- Secondary action buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnHexEditor"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Hex Editor"
+                android:textSize="13sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            <Button
+                android:id="@+id/btnCustomKeys"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="Custom Keys"
+                android:textSize="13sp"
+                android:visibility="gone"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        </LinearLayout>
 
         <!-- Info Card -->
         <androidx.cardview.widget.CardView
@@ -136,6 +166,120 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         </LinearLayout>
+
+        <!-- Notes Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Notes"
+                        android:textSize="12sp"
+                        android:textColor="#757575"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.1" />
+
+                    <Button
+                        android:id="@+id/btnEditNotes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="28dp"
+                        android:text="Edit"
+                        android:textSize="11sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="#E0E0E0"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="#424242"
+                    android:text="(no notes)" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Category Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Category"
+                        android:textSize="12sp"
+                        android:textColor="#757575"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.1" />
+
+                    <Button
+                        android:id="@+id/btnEditCategory"
+                        android:layout_width="wrap_content"
+                        android:layout_height="28dp"
+                        android:text="Change"
+                        android:textSize="11sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="#E0E0E0"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="#1565C0"
+                    android:text="General" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- Raw Data Card -->
         <androidx.cardview.widget.CardView
