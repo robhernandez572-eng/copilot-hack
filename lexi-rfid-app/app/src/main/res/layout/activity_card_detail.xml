@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5">
@@ -11,9 +12,44 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Write status banner (hidden when not writing) -->
+        <TextView
+            android:id="@+id/tvWriteStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FF9800"
+            android:gravity="center"
+            android:padding="14dp"
+            android:text="Hold a blank NFC tag to back of phone..."
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <!-- Write button — prominent, at top -->
+        <Button
+            android:id="@+id/btnWriteToTag"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
+            android:text="✏  Write to NFC Tag"
+            android:textSize="15sp"
+            android:backgroundTint="#1565C0" />
+
+        <!-- Cancel write button -->
+        <Button
+            android:id="@+id/btnCancelWrite"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:text="Cancel Write"
+            android:textSize="14sp"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
         <!-- Info Card -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="8dp"
@@ -35,7 +71,8 @@
                     android:letterSpacing="0.1" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp"
-                    android:background="#E0E0E0" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
+                    android:background="#E0E0E0"
+                    android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
 
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:layout_marginBottom="8dp">
@@ -102,7 +139,6 @@
 
         <!-- Raw Data Card -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
@@ -125,7 +161,8 @@
                     android:letterSpacing="0.1" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp"
-                    android:background="#E0E0E0" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
+                    android:background="#E0E0E0"
+                    android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
 
                 <TextView
                     android:id="@+id/tvDetailRaw"

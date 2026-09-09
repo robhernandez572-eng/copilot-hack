@@ -3,6 +3,7 @@ package com.lexi.rfid;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.usb.UsbDevice;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.os.Bundle;
@@ -10,28 +11,45 @@ import android.os.Vibrator;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    // NFC
     private NfcAdapter nfcAdapter;
     private PendingIntent pendingIntent;
     private IntentFilter[] intentFilters;
+    private boolean readMode = false;
+
+    // Write mode (selected card from library to write)
+    private CardData pendingWriteCard = null;
+    private boolean writeMode = false;
+
+    // Storage
     private CardStorage storage;
     private CardAdapter adapter;
     private List<CardData> cards;
-    private TextView tvStatus;
+
+    // Views
+    private TextView tvStatus, tvScannerHint, tvSelectedCard;
+    private TextView tvUsbStatus, tvUsbDetail;
     private RecyclerView recyclerView;
     private View emptyView;
-    private boolean scanMode = false;
+    private View tabScanner, tabLibrary, tabUsb;
+    private Button btnRead, btnWrite, btnScanUsb;
+    private View layoutWritePicker;
+
+    // USB
+    private UsbDeviceManager usbDeviceManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,10 +59,23 @@ public class MainActivity extends AppCompatActivity {
         storage = new CardStorage(this);
         nfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
+        // Views
         tvStatus = findViewById(R.id.tvStatus);
+        tvScannerHint = findViewById(R.id.tvScannerHint);
+        tvSelectedCard = findViewById(R.id.tvSelectedCard);
+        tvUsbStatus = findViewById(R.id.tvUsbStatus);
+        tvUsbDetail = findViewById(R.id.tvUsbDetail);
         recyclerView = findViewById(R.id.recyclerView);
         emptyView = findViewById(R.id.emptyView);
+        tabScanner = findViewById(R.id.tabScanner);
+        tabLibrary = findViewById(R.id.tabLibrary);
+        tabUsb = findViewById(R.id.tabUsb);
+        btnRead = findViewById(R.id.btnRead);
+        btnWrite = findViewById(R.id.btnWrite);
+        btnScanUsb = findViewById(R.id.btnScanUsb);
+        layoutWritePicker = findViewById(R.id.layoutWritePicker);
 
+        // Library recycler
         cards = storage.loadCards();
         adapter = new CardAdapter(cards, new CardAdapter.OnCardClickListener() {
             @Override
@@ -58,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("timestamp", card.getTimestamp());
                 startActivity(intent);
             }
-
             @Override
             public void onCardLongClick(CardData card) {
                 showDeleteDialog(card);
@@ -67,17 +97,59 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(v -> toggleScanMode());
+        // Bottom nav
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_scanner) {
+                showTab(0);
+            } else if (id == R.id.nav_library) {
+                refreshLibrary();
+                showTab(1);
+            } else if (id == R.id.nav_usb) {
+                showTab(2);
+            }
+            return true;
+        });
+
+        // NFC scanner buttons
+        btnRead.setOnClickListener(v -> toggleReadMode());
+        btnWrite.setOnClickListener(v -> {
+            if (pendingWriteCard == null) {
+                Snackbar.make(recyclerView,
+                    "Open Card Library, tap a card, then use Write to NFC Tag",
+                    Snackbar.LENGTH_LONG).show();
+            } else {
+                toggleWriteMode();
+            }
+        });
+
+        // USB tab buttons
+        btnScanUsb.setOnClickListener(v -> scanUsb());
+        findViewById(R.id.btnOpenTerminal).setOnClickListener(v ->
+            startActivity(new Intent(this, ChameleonActivity.class)));
 
         setupNfc();
+        setupUsb();
         updateEmptyView();
+        showTab(0);
         handleIntent(getIntent());
     }
+
+    private void showTab(int index) {
+        tabScanner.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
+        tabLibrary.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
+        tabUsb.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
+        if (index != 0) stopReadMode();
+    }
+
+    // ── NFC READ ──────────────────────────────────────────────────────────
 
     private void setupNfc() {
         if (nfcAdapter == null) {
             tvStatus.setText("NFC not available on this device");
+            btnRead.setEnabled(false);
+            btnWrite.setEnabled(false);
             return;
         }
         pendingIntent = PendingIntent.getActivity(this, 0,
@@ -90,31 +162,96 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    private void toggleScanMode() {
-        scanMode = !scanMode;
-        if (scanMode) {
-            if (nfcAdapter == null || !nfcAdapter.isEnabled()) {
-                Snackbar.make(recyclerView, "Please enable NFC in Settings", Snackbar.LENGTH_LONG).show();
-                scanMode = false;
-                return;
-            }
-            tvStatus.setText("Ready to scan — hold card to back of phone");
-            tvStatus.setBackgroundColor(0xFF4CAF50);
+    private void toggleReadMode() {
+        if (readMode) {
+            stopReadMode();
         } else {
-            tvStatus.setText("Tap the + button to start scanning");
-            tvStatus.setBackgroundColor(0xFF2196F3);
+            startReadMode();
         }
+    }
+
+    private void startReadMode() {
+        if (nfcAdapter == null || !nfcAdapter.isEnabled()) {
+            Snackbar.make(tabScanner, "Please enable NFC in Settings", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        writeMode = false;
+        readMode = true;
+        btnRead.setText("STOP Reading");
+        btnRead.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(0xFFF44336));
+        tvStatus.setText("Hold any NFC card to back of phone...");
+        tvStatus.setBackgroundColor(0xFF388E3C);
+        tvScannerHint.setText("Waiting for NFC tag...");
+        nfcAdapter.enableForegroundDispatch(this, pendingIntent, intentFilters, null);
+    }
+
+    private void stopReadMode() {
+        readMode = false;
+        btnRead.setText("READ Tag");
+        btnRead.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(0xFF1565C0));
+        tvStatus.setText("Tap READ or WRITE below");
+        tvStatus.setBackgroundColor(0xFF1565C0);
+        tvScannerHint.setText("Tap READ, then hold any NFC card\nto the back of your phone");
+        if (nfcAdapter != null) nfcAdapter.disableForegroundDispatch(this);
+    }
+
+    private void toggleWriteMode() {
+        if (writeMode) {
+            stopWriteMode();
+        } else {
+            startWriteMode();
+        }
+    }
+
+    private void startWriteMode() {
+        if (nfcAdapter == null || !nfcAdapter.isEnabled()) {
+            Snackbar.make(tabScanner, "Please enable NFC in Settings", Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        readMode = false;
+        writeMode = true;
+        btnWrite.setText("STOP Writing");
+        btnWrite.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(0xFFF44336));
+        tvStatus.setText("Hold a blank NFC tag to phone to write: "
+            + (pendingWriteCard != null ? pendingWriteCard.getName() : ""));
+        tvStatus.setBackgroundColor(0xFFE65100);
+        tvScannerHint.setText("Waiting for blank tag...");
+        nfcAdapter.enableForegroundDispatch(this, pendingIntent, intentFilters, null);
+    }
+
+    private void stopWriteMode() {
+        writeMode = false;
+        btnWrite.setText("WRITE Tag");
+        btnWrite.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(0xFF558B2F));
+        tvStatus.setText("Tap READ or WRITE below");
+        tvStatus.setBackgroundColor(0xFF1565C0);
+        tvScannerHint.setText("Tap READ, then hold any NFC card\nto the back of your phone");
+        if (nfcAdapter != null) nfcAdapter.disableForegroundDispatch(this);
+    }
+
+    /** Called by CardAdapter long-press to queue a card for writing */
+    public void queueCardForWrite(CardData card) {
+        pendingWriteCard = card;
+        btnWrite.setEnabled(true);
+        tvSelectedCard.setText(card.getName() + " (" + card.getUid() + ")");
+        layoutWritePicker.setVisibility(View.VISIBLE);
+        BottomNavigationView nav = findViewById(R.id.bottomNav);
+        nav.setSelectedItemId(R.id.nav_scanner);
+        showTab(0);
+        Snackbar.make(tabScanner, "Card queued — tap WRITE TAG to write it", Snackbar.LENGTH_LONG).show();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (nfcAdapter != null && scanMode) {
+        if (nfcAdapter != null && (readMode || writeMode)) {
             nfcAdapter.enableForegroundDispatch(this, pendingIntent, intentFilters, null);
         }
-        cards = storage.loadCards();
-        adapter.updateCards(cards);
-        updateEmptyView();
+        refreshLibrary();
     }
 
     @Override
@@ -136,25 +273,116 @@ public class MainActivity extends AppCompatActivity {
                 || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
                 || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
             Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-            if (tag != null) processTag(tag);
+            if (tag == null) return;
+            if (writeMode && pendingWriteCard != null) {
+                performWrite(tag);
+            } else if (readMode) {
+                processRead(tag);
+            }
         }
     }
 
-    private void processTag(Tag tag) {
+    private void processRead(Tag tag) {
         try {
             vibrate();
             CardData card = NfcHelper.readTag(tag);
             storage.saveCard(card);
-            cards = storage.loadCards();
-            adapter.updateCards(cards);
-            updateEmptyView();
-            tvStatus.setText("Scanned: " + card.getName() + " (" + card.getTypeLabel() + ")");
-            tvStatus.setBackgroundColor(0xFF4CAF50);
-            Toast.makeText(this, "Card saved: " + card.getUid(), Toast.LENGTH_SHORT).show();
+            refreshLibrary();
+            tvStatus.setText("Read: " + card.getName() + " (" + card.getTypeLabel() + ")");
+            tvStatus.setBackgroundColor(0xFF388E3C);
+            tvScannerHint.setText("Card saved! Scan another or tap STOP.");
+            // Enable write button now that we have a card
+            pendingWriteCard = card;
+            btnWrite.setEnabled(true);
+            tvSelectedCard.setText(card.getName() + " (" + card.getUid() + ")");
+            layoutWritePicker.setVisibility(View.VISIBLE);
+            Toast.makeText(this, "Saved: " + card.getUid(), Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            tvStatus.setText("Error reading card: " + e.getMessage());
+            tvStatus.setText("Read error: " + e.getMessage());
             tvStatus.setBackgroundColor(0xFFF44336);
         }
+    }
+
+    private void performWrite(Tag tag) {
+        tvStatus.setText("Writing...");
+        new Thread(() -> {
+            String result = NfcHelper.writeTag(tag, pendingWriteCard);
+            runOnUiThread(() -> {
+                vibrate();
+                stopWriteMode();
+                new AlertDialog.Builder(this)
+                    .setTitle("Write Complete")
+                    .setMessage(result)
+                    .setPositiveButton("OK", null)
+                    .show();
+            });
+        }).start();
+    }
+
+    // ── USB ───────────────────────────────────────────────────────────────
+
+    private void setupUsb() {
+        usbDeviceManager = new UsbDeviceManager(this, new UsbDeviceManager.UsbListener() {
+            @Override public void onDeviceConnected(UsbDevice device, UsbDeviceManager.DeviceType type) {
+                String label = deviceLabel(type, device);
+                tvUsbStatus.setText(label + " — Connected");
+                tvUsbStatus.setTextColor(0xFF00C853);
+                tvUsbDetail.setText("VID " + String.format("%04X", device.getVendorId())
+                    + "  PID " + String.format("%04X", device.getProductId())
+                    + (device.getProductName() != null ? "\n" + device.getProductName() : ""));
+            }
+            @Override public void onDeviceDisconnected(UsbDevice device) {
+                tvUsbStatus.setText("Device disconnected");
+                tvUsbStatus.setTextColor(0xFFFFFFFF);
+                tvUsbDetail.setText("Connect via USB-C → USB-A adapter");
+            }
+            @Override public void onPermissionDenied(UsbDevice device) {
+                tvUsbStatus.setText("USB permission denied");
+                tvUsbStatus.setTextColor(0xFFF44336);
+            }
+            @Override public void onDataReceived(String data) {}
+            @Override public void onError(String error) {
+                tvUsbDetail.setText(error);
+            }
+        });
+        usbDeviceManager.register();
+    }
+
+    private void scanUsb() {
+        tvUsbStatus.setText("Scanning...");
+        tvUsbStatus.setTextColor(0xFFFFFFFF);
+        List<UsbDevice> devices = usbDeviceManager.findSupportedDevices();
+        if (devices.isEmpty()) {
+            tvUsbStatus.setText("No device found");
+            tvUsbDetail.setText("Make sure your device is plugged in via USB-C adapter");
+        } else {
+            UsbDevice dev = devices.get(0);
+            UsbDeviceManager.DeviceType type = usbDeviceManager.classify(dev);
+            tvUsbStatus.setText("Found: " + deviceLabel(type, dev));
+            tvUsbDetail.setText("VID " + String.format("%04X", dev.getVendorId())
+                + "  PID " + String.format("%04X", dev.getProductId()));
+            usbDeviceManager.requestPermissionAndConnect(dev);
+        }
+    }
+
+    private String deviceLabel(UsbDeviceManager.DeviceType type, UsbDevice dev) {
+        switch (type) {
+            case CHAMELEON_ULTRA: return "Chameleon Ultra";
+            case CHAMELEON_MINI: return "Chameleon Mini";
+            case LEXI_RFID: return "LEXI RFID Device";
+            case GENERIC_SERIAL: return "USB Serial Device";
+            default:
+                String name = dev.getProductName();
+                return name != null ? name : "USB Device";
+        }
+    }
+
+    // ── HELPERS ───────────────────────────────────────────────────────────
+
+    private void refreshLibrary() {
+        cards = storage.loadCards();
+        adapter.updateCards(cards);
+        updateEmptyView();
     }
 
     private void vibrate() {
@@ -170,9 +398,7 @@ public class MainActivity extends AppCompatActivity {
             .setMessage("Delete \"" + card.getName() + "\"?")
             .setPositiveButton("Delete", (d, w) -> {
                 storage.deleteCard(card.getUid());
-                cards = storage.loadCards();
-                adapter.updateCards(cards);
-                updateEmptyView();
+                refreshLibrary();
             })
             .setNegativeButton("Cancel", null)
             .show();
@@ -206,9 +432,7 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage("Delete all saved cards?")
                 .setPositiveButton("Clear", (d, w) -> {
                     for (CardData c : cards) storage.deleteCard(c.getUid());
-                    cards = storage.loadCards();
-                    adapter.updateCards(cards);
-                    updateEmptyView();
+                    refreshLibrary();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -216,12 +440,18 @@ public class MainActivity extends AppCompatActivity {
         }
         if (item.getItemId() == R.id.action_about) {
             new AlertDialog.Builder(this)
-                .setTitle("LEXI RFID NFC Reader")
-                .setMessage("Compatible with:\n• MIFARE Classic (1K/4K)\n• MIFARE Ultralight\n• NDEF tags\n• ISO 14443-4 (ISO-DEP)\n• ISO 15693 (NFC-V)\n• NFC-A / NFC-B / NFC-F\n• 125 KHz LF (via LEXI USB device)\n\nHold card to back of phone to read.\nLong-press a saved card to delete.")
+                .setTitle("LEXI RFID NFC Reader v1.1")
+                .setMessage("READ — Scan any NFC card (MIFARE Classic, Ultralight, NDEF, ISO-DEP, NFC-A/B/F/V)\n\nWRITE — Clone a scanned card to a blank NFC tag\n\nUSB Device — LEXI RFID 125 KHz + Chameleon Mini/Ultra over USB-C adapter\n\nLong-press a card in Library to delete it.")
                 .setPositiveButton("OK", null)
                 .show();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        usbDeviceManager.unregister();
     }
 }

@@ -1,85 +1,322 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <!-- Tab content switcher -->
+    <FrameLayout
+        android:id="@+id/tabContent"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <TextView
-            android:id="@+id/tvStatus"
+        <!-- ── NFC SCANNER TAB ──────────────────────────────────────────── -->
+        <LinearLayout
+            android:id="@+id/tabScanner"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#2196F3"
-            android:gravity="center"
-            android:padding="14dp"
-            android:text="Tap the + button to start scanning"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-medium" />
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#FAFAFA">
 
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerView"
+            <!-- Status bar -->
+            <TextView
+                android:id="@+id/tvStatus"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="8dp"
-                android:clipToPadding="false" />
+                android:layout_height="wrap_content"
+                android:background="#1565C0"
+                android:gravity="center"
+                android:padding="14dp"
+                android:text="Tap READ or WRITE below"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
 
+            <!-- Mode buttons -->
             <LinearLayout
-                android:id="@+id/emptyView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <Button
+                    android:id="@+id/btnRead"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="READ Tag"
+                    android:textSize="14sp"
+                    android:backgroundTint="#1565C0" />
+
+                <Button
+                    android:id="@+id/btnWrite"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="WRITE Tag"
+                    android:textSize="14sp"
+                    android:backgroundTint="#558B2F"
+                    android:enabled="false" />
+
+            </LinearLayout>
+
+            <!-- Write card selector (hidden until WRITE tapped) -->
+            <LinearLayout
+                android:id="@+id/layoutWritePicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:paddingTop="0dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_gravity="center_vertical"
+                    android:text="Card to write:"
+                    android:textColor="#424242"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvSelectedCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:layout_gravity="center_vertical"
+                    android:text="(select from Library tab)"
+                    android:textColor="#757575"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace" />
+
+            </LinearLayout>
+
+            <!-- Instructions / big icon -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:padding="32dp"
-                android:visibility="gone">
+                android:padding="32dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📡"
-                    android:textSize="64sp" />
+                    android:textSize="72sp" />
 
                 <TextView
+                    android:id="@+id/tvScannerHint"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="20dp"
                     android:gravity="center"
-                    android:text="No cards saved yet"
-                    android:textSize="20sp"
-                    android:textColor="#212121"
+                    android:text="Tap READ, then hold any NFC card\nto the back of your phone"
+                    android:textSize="15sp"
+                    android:textColor="#424242"
                     android:fontFamily="sans-serif-medium" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:gravity="center"
-                    android:text="Tap + below then hold an NFC card\nto the back of your phone"
-                    android:textSize="14sp"
+                    android:text="Supports: MIFARE Classic, MIFARE Ultralight,\nNDEF, ISO-DEP, NFC-A/B/F/V"
+                    android:textSize="12sp"
                     android:textColor="#757575" />
 
             </LinearLayout>
-        </FrameLayout>
 
-    </LinearLayout>
+        </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
+        <!-- ── CARD LIBRARY TAB ─────────────────────────────────────────── -->
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:id="@+id/tabLibrary"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="8dp"
+                    android:clipToPadding="false" />
+
+                <LinearLayout
+                    android:id="@+id/emptyView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="32dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📋"
+                        android:textSize="64sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        android:text="No cards saved yet"
+                        android:textSize="20sp"
+                        android:textColor="#212121"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="Go to the NFC Scanner tab and\ntap READ to scan your first card"
+                        android:textSize="14sp"
+                        android:textColor="#757575" />
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+        <!-- ── USB DEVICE TAB ───────────────────────────────────────────── -->
+        <LinearLayout
+            android:id="@+id/tabUsb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#1A1A2E"
+            android:padding="16dp"
+            android:gravity="top"
+            android:visibility="gone">
+
+            <!-- Device status -->
+            <androidx.cardview.widget.CardView
+                xmlns:card="http://schemas.android.com/apk/res-auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                card:cardCornerRadius="8dp"
+                card:cardElevation="4dp"
+                card:cardBackgroundColor="#16213E">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="USB DEVICE"
+                        android:textColor="#29B6F6"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.15"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:id="@+id/tvUsbStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="No device detected"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:id="@+id/tvUsbDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Connect via USB-C → USB-A adapter"
+                        android:textColor="#607D8B"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Scan button -->
+            <Button
+                android:id="@+id/btnScanUsb"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="Scan for USB Device"
+                android:backgroundTint="#0F3460" />
+
+            <!-- Open terminal button -->
+            <Button
+                android:id="@+id/btnOpenTerminal"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Open USB Terminal"
+                android:backgroundTint="#1565C0" />
+
+            <!-- Device info card -->
+            <androidx.cardview.widget.CardView
+                xmlns:card="http://schemas.android.com/apk/res-auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                card:cardCornerRadius="8dp"
+                card:cardElevation="4dp"
+                card:cardBackgroundColor="#0D0D0D">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SUPPORTED DEVICES"
+                        android:textColor="#29B6F6"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.15"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="• LEXI RFID NFC Duplicator (CP210x / CH340)\n• Chameleon Mini  (VID 16D0 / PID 04B2)\n• Chameleon Ultra (VID 16D0 / PID 06C2)\n• Generic CDC-ACM serial adapters\n• FTDI FT232 based devices\n\nUsing USB-C adapter? Plug the LEXI/Chameleon into your USB-C-to-USB-A adapter, then tap Scan."
+                        android:textColor="#00FF41"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:contentDescription="Scan NFC"
-        app:srcCompat="@android:drawable/ic_menu_add" />
+        app:menu="@menu/bottom_nav" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</LinearLayout>

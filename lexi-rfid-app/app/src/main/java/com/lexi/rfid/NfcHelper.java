@@ -1,21 +1,28 @@
 package com.lexi.rfid;
 
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import android.nfc.Tag;
+import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
 import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.Ndef;
+import android.nfc.tech.NdefFormatable;
 import android.nfc.tech.NfcA;
 import android.nfc.tech.NfcB;
 import android.nfc.tech.NfcF;
 import android.nfc.tech.NfcV;
-import android.nfc.tech.IsoDep;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NfcHelper {
+
+    // ── READ ───────────────────────────────────────────────────────────────
 
     public static CardData readTag(Tag tag) {
         byte[] tagId = tag.getId();
@@ -25,11 +32,13 @@ public class NfcHelper {
         CardData.CardType cardType = CardData.CardType.NFC_OTHER;
         String technology = "NFC";
 
-        // Try MIFARE Classic first
         if (hasTech(techList, MifareClassic.class.getName())) {
             cardType = CardData.CardType.NFC_MIFARE;
             technology = "MIFARE Classic";
             rawData.append(readMifare(tag));
+        } else if (hasTech(techList, MifareUltralight.class.getName())) {
+            technology = "MIFARE Ultralight";
+            rawData.append(readMifareUltralight(tag));
         } else if (hasTech(techList, Ndef.class.getName())) {
             cardType = CardData.CardType.NFC_NDEF;
             technology = "NDEF";
@@ -50,9 +59,6 @@ public class NfcHelper {
         } else if (hasTech(techList, NfcV.class.getName())) {
             technology = "NFC-V (ISO 15693)";
             rawData.append(readNfcV(tag));
-        } else if (hasTech(techList, MifareUltralight.class.getName())) {
-            technology = "MIFARE Ultralight";
-            rawData.append(readMifareUltralight(tag));
         } else {
             rawData.append("UID: ").append(uid).append("\nTechs: ").append(Arrays.toString(techList));
         }
@@ -68,7 +74,7 @@ public class NfcHelper {
             mifare.connect();
             int sectors = mifare.getSectorCount();
             sb.append("Sectors: ").append(sectors).append("\n");
-            for (int s = 0; s < Math.min(sectors, 16); s++) {
+            for (int s = 0; s < Math.min(sectors, 40); s++) {
                 boolean authed = false;
                 try { authed = mifare.authenticateSectorWithKeyA(s, MifareClassic.KEY_DEFAULT); } catch (IOException ignored) {}
                 if (!authed) try { authed = mifare.authenticateSectorWithKeyB(s, MifareClassic.KEY_DEFAULT); } catch (IOException ignored) {}
@@ -109,7 +115,7 @@ public class NfcHelper {
                     catch (Exception ignored) {}
                 }
             } else {
-                sb.append("Empty NDEF tag");
+                sb.append("Empty NDEF tag\n");
             }
             sb.append("Max size: ").append(ndef.getMaxSize()).append(" bytes\n");
             sb.append("Writable: ").append(ndef.isWritable()).append("\n");
@@ -127,12 +133,11 @@ public class NfcHelper {
         if (iso == null) return "Could not open ISO-DEP";
         try {
             iso.connect();
-            byte[] hiLayerResponse = iso.getHiLayerResponse();
-            byte[] historicalBytes = iso.getHistoricalBytes();
-            if (hiLayerResponse != null) sb.append("Hi-Layer: ").append(bytesToHex(hiLayerResponse)).append("\n");
-            if (historicalBytes != null) sb.append("Historical: ").append(bytesToHex(historicalBytes)).append("\n");
-            // Send SELECT command
-            byte[] select = new byte[]{0x00, (byte)0xA4, 0x04, 0x00, 0x00};
+            byte[] hi = iso.getHiLayerResponse();
+            byte[] hist = iso.getHistoricalBytes();
+            if (hi != null) sb.append("Hi-Layer: ").append(bytesToHex(hi)).append("\n");
+            if (hist != null) sb.append("Historical: ").append(bytesToHex(hist)).append("\n");
+            byte[] select = {0x00, (byte)0xA4, 0x04, 0x00, 0x00};
             try {
                 byte[] resp = iso.transceive(select);
                 sb.append("SELECT response: ").append(bytesToHex(resp)).append("\n");
@@ -184,7 +189,7 @@ public class NfcHelper {
         try {
             ul.connect();
             sb.append("Type: ").append(ul.getType() == MifareUltralight.TYPE_ULTRALIGHT ? "Ultralight" : "Ultralight C").append("\n");
-            for (int page = 0; page < 16; page++) {
+            for (int page = 0; page < 48; page++) {
                 try {
                     byte[] data = ul.readPages(page);
                     sb.append("P").append(String.format("%02d", page)).append(": ")
@@ -199,9 +204,180 @@ public class NfcHelper {
         return sb.toString();
     }
 
-    private static boolean hasTech(String[] techs, String tech) {
-        for (String t : techs) if (t.equals(tech)) return true;
-        return false;
+    // ── WRITE ──────────────────────────────────────────────────────────────
+
+    /** Write card data to a physical NFC tag. Returns a status message. */
+    public static String writeTag(Tag tag, CardData card) {
+        String[] techList = tag.getTechList();
+        String tech = card.getTechnology();
+
+        // Match source card type to target tag technology
+        if (tech.contains("MIFARE Classic") && hasTech(techList, MifareClassic.class.getName())) {
+            return writeMifareClassic(tag, card.getRawData());
+        }
+        if (tech.contains("Ultralight") && hasTech(techList, MifareUltralight.class.getName())) {
+            return writeMifareUltralight(tag, card.getRawData());
+        }
+        // NDEF on any NDEF-capable tag
+        if (hasTech(techList, Ndef.class.getName())) {
+            return writeNdef(tag, card);
+        }
+        if (hasTech(techList, NdefFormatable.class.getName())) {
+            return formatAndWriteNdef(tag, card);
+        }
+        // Fallback: try whichever write method matches the blank tag
+        if (hasTech(techList, MifareClassic.class.getName())) {
+            return writeMifareClassic(tag, card.getRawData());
+        }
+        if (hasTech(techList, MifareUltralight.class.getName())) {
+            return writeMifareUltralight(tag, card.getRawData());
+        }
+        return "Cannot write to this tag type:\n" + Arrays.toString(techList);
+    }
+
+    private static String writeMifareClassic(Tag tag, String rawData) {
+        MifareClassic mifare = MifareClassic.get(tag);
+        if (mifare == null) return "Cannot open MIFARE Classic for writing";
+        Map<String, byte[]> blocks = parseMifareBlocks(rawData);
+        if (blocks.isEmpty()) return "No MIFARE block data found in saved card";
+        StringBuilder result = new StringBuilder("MIFARE Classic write:\n");
+        int written = 0, failed = 0;
+        try {
+            mifare.connect();
+            for (Map.Entry<String, byte[]> entry : blocks.entrySet()) {
+                String key = entry.getKey(); // "S0B3"
+                byte[] data = entry.getValue();
+                int sIdx = Integer.parseInt(key.substring(1, key.indexOf('B')));
+                int bIdx = Integer.parseInt(key.substring(key.indexOf('B') + 1));
+                // Skip sector trailer (last block) to avoid locking card
+                int blockCount = mifare.getBlockCountInSector(sIdx);
+                if (bIdx == blockCount - 1) continue;
+                int absBlock = mifare.sectorToBlock(sIdx) + bIdx;
+                boolean authed = false;
+                try { authed = mifare.authenticateSectorWithKeyA(sIdx, MifareClassic.KEY_DEFAULT); } catch (Exception ignored) {}
+                if (!authed) try { authed = mifare.authenticateSectorWithKeyB(sIdx, MifareClassic.KEY_DEFAULT); } catch (Exception ignored) {}
+                if (authed) {
+                    try {
+                        mifare.writeBlock(absBlock, data);
+                        written++;
+                    } catch (Exception e) {
+                        result.append("Block ").append(absBlock).append(": FAIL\n");
+                        failed++;
+                    }
+                } else {
+                    result.append("S").append(sIdx).append(": auth failed\n");
+                    failed++;
+                }
+            }
+        } catch (Exception e) {
+            result.append("Error: ").append(e.getMessage()).append("\n");
+        } finally {
+            try { mifare.close(); } catch (IOException ignored) {}
+        }
+        result.append("Written: ").append(written).append(" blocks");
+        if (failed > 0) result.append(", Failed: ").append(failed);
+        return result.toString();
+    }
+
+    private static String writeMifareUltralight(Tag tag, String rawData) {
+        MifareUltralight ul = MifareUltralight.get(tag);
+        if (ul == null) return "Cannot open MIFARE Ultralight for writing";
+        Map<Integer, byte[]> pages = parseUltralightPages(rawData);
+        if (pages.isEmpty()) return "No Ultralight page data found in saved card";
+        StringBuilder result = new StringBuilder("Ultralight write:\n");
+        int written = 0, failed = 0;
+        try {
+            ul.connect();
+            for (Map.Entry<Integer, byte[]> entry : pages.entrySet()) {
+                int page = entry.getKey();
+                if (page < 4) continue; // Skip UID/config pages 0-3
+                try {
+                    ul.writePage(page, entry.getValue());
+                    written++;
+                } catch (Exception e) {
+                    result.append("Page ").append(page).append(": FAIL\n");
+                    failed++;
+                }
+            }
+        } catch (Exception e) {
+            result.append("Error: ").append(e.getMessage()).append("\n");
+        } finally {
+            try { ul.close(); } catch (IOException ignored) {}
+        }
+        result.append("Written: ").append(written).append(" pages");
+        if (failed > 0) result.append(", Failed: ").append(failed);
+        return result.toString();
+    }
+
+    private static String writeNdef(Tag tag, CardData card) {
+        Ndef ndef = Ndef.get(tag);
+        if (ndef == null) return "Cannot open NDEF for writing";
+        NdefMessage message = buildNdefMessage(card);
+        try {
+            ndef.connect();
+            if (!ndef.isWritable()) return "Tag is read-only";
+            if (ndef.getMaxSize() < message.toByteArray().length)
+                return "Tag too small (" + ndef.getMaxSize() + " bytes available)";
+            ndef.writeNdefMessage(message);
+            return "NDEF written successfully";
+        } catch (Exception e) {
+            return "NDEF write error: " + e.getMessage();
+        } finally {
+            try { ndef.close(); } catch (IOException ignored) {}
+        }
+    }
+
+    private static String formatAndWriteNdef(Tag tag, CardData card) {
+        NdefFormatable formatable = NdefFormatable.get(tag);
+        if (formatable == null) return "Tag is not NDEF-formatable";
+        NdefMessage message = buildNdefMessage(card);
+        try {
+            formatable.connect();
+            formatable.format(message);
+            return "Tag formatted and NDEF written";
+        } catch (Exception e) {
+            return "Format error: " + e.getMessage();
+        } finally {
+            try { formatable.close(); } catch (IOException ignored) {}
+        }
+    }
+
+    private static NdefMessage buildNdefMessage(CardData card) {
+        String text = "UID:" + card.getUid() + "|Type:" + card.getTechnology()
+            + "|Name:" + card.getName();
+        NdefRecord record = NdefRecord.createTextRecord("en", text);
+        return new NdefMessage(new NdefRecord[]{record});
+    }
+
+    // ── PARSERS ────────────────────────────────────────────────────────────
+
+    /** Parse "S0B0: AABBCC..." lines → key="S0B0", value=bytes */
+    private static Map<String, byte[]> parseMifareBlocks(String rawData) {
+        Map<String, byte[]> result = new LinkedHashMap<>();
+        Pattern p = Pattern.compile("(S\\d+B\\d+): ([0-9A-Fa-f]{32})");
+        Matcher m = p.matcher(rawData);
+        while (m.find()) result.put(m.group(1), hexToBytes(m.group(2)));
+        return result;
+    }
+
+    /** Parse "P04: AABBCCDD" lines → page index → 4 bytes */
+    private static Map<Integer, byte[]> parseUltralightPages(String rawData) {
+        Map<Integer, byte[]> result = new LinkedHashMap<>();
+        Pattern p = Pattern.compile("P(\\d+): ([0-9A-Fa-f]{8})");
+        Matcher m = p.matcher(rawData);
+        while (m.find()) result.put(Integer.parseInt(m.group(1)), hexToBytes(m.group(2)));
+        return result;
+    }
+
+    // ── UTILITIES ──────────────────────────────────────────────────────────
+
+    public static byte[] hexToBytes(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2)
+            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                + Character.digit(hex.charAt(i + 1), 16));
+        return data;
     }
 
     public static String bytesToHex(byte[] bytes) {
@@ -219,5 +395,10 @@ public class NfcHelper {
             sb.append(String.format("%02X", bytes[i]));
         }
         return sb.toString();
+    }
+
+    private static boolean hasTech(String[] techs, String tech) {
+        for (String t : techs) if (t.equals(tech)) return true;
+        return false;
     }
 }

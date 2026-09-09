@@ -37,7 +37,7 @@
 
     </LinearLayout>
 
-    <!-- Quick command buttons -->
+    <!-- Quick command row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -52,7 +52,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:text="VERSION"
-            android:textSize="11sp"
+            android:textSize="10sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:textColor="#FFFFFF" />
 
@@ -63,7 +63,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:text="HELP"
-            android:textSize="11sp"
+            android:textSize="10sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:textColor="#FFFFFF" />
 
@@ -74,7 +74,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:text="UID?"
-            android:textSize="11sp"
+            android:textSize="10sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:textColor="#FFFFFF" />
 
@@ -85,9 +85,128 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:text="CONFIG?"
-            android:textSize="11sp"
+            android:textSize="10sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnCmdReset"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:text="RESET"
+            android:textSize="10sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="#FF5252" />
+
+    </LinearLayout>
+
+    <!-- Chameleon mode selector -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="6dp"
+        android:background="#0A0A1A">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SET MODE:"
+            android:textColor="#607D8B"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnMode1k"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                android:text="MF 1K"
+                android:textSize="10sp"
+                android:backgroundTint="#1565C0" />
+
+            <Button
+                android:id="@+id/btnMode4k"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                android:text="MF 4K"
+                android:textSize="10sp"
+                android:backgroundTint="#1565C0" />
+
+            <Button
+                android:id="@+id/btnModeUl"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                android:text="UL"
+                android:textSize="10sp"
+                android:backgroundTint="#1565C0" />
+
+            <Button
+                android:id="@+id/btnModeSniff"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                android:text="SNIFF"
+                android:textSize="10sp"
+                android:backgroundTint="#4A148C" />
+
+            <Button
+                android:id="@+id/btnModeOff"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                android:text="OFF"
+                android:textSize="10sp"
+                android:backgroundTint="#37474F" />
+
+        </LinearLayout>
+
+        <!-- UID setter row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <EditText
+                android:id="@+id/etUidInput"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:hint="UID hex (e.g. AABBCCDD)"
+                android:textColor="#FFFFFF"
+                android:background="#1A1A2E"
+                android:padding="8dp"
+                android:fontFamily="monospace"
+                android:textSize="12sp"
+                android:inputType="textCapCharacters"
+                android:singleLine="true" />
+
+            <Button
+                android:id="@+id/btnSetUid"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:text="Set UID"
+                android:textSize="11sp"
+                android:backgroundTint="#558B2F" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -103,7 +222,7 @@
         android:textSize="12sp"
         android:padding="8dp"
         android:scrollbars="vertical"
-        android:text="LEXI RFID / Chameleon USB Terminal\n-----------------------------------\nConnect your device via USB-OTG adapter,\nthen tap [Scan USB] to detect it.\n\nChameleon commands:\n  VERSION      - firmware info\n  CONFIG?      - list modes\n  CONFIG=MF_CLASSIC_1K  - emulate MIFARE 1K\n  UID?         - read UID\n  UID=AABBCCDD - set UID\n  UPLOAD       - upload card dump\n  DOWNLOAD     - download card dump\n  RESET        - reboot device\n\n" />
+        android:text="LEXI RFID / Chameleon USB Terminal\n-----------------------------------\nConnect device via USB-C adapter, tap [Scan USB].\n\nMode buttons:\n  MF 1K  — MIFARE Classic 1K emulation\n  MF 4K  — MIFARE Classic 4K emulation\n  UL     — MIFARE Ultralight emulation\n  SNIFF  — ISO 14443-A sniffer\n  OFF    — disable emulation\n\nManual commands:\n  CONFIG=MF_CLASSIC_1K\n  UID=AABBCCDD\n  UPLOAD / DOWNLOAD\n  BUTTON=UID_RANDOM\n\n" />
 
     <!-- Command input -->
     <LinearLayout

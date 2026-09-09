@@ -21,28 +21,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Chameleon Mini / Chameleon Ultra terminal activity.
- * Also supports LEXI 125 KHz serial commands.
+ * Full USB serial terminal for Chameleon Mini, Chameleon Ultra, and LEXI RFID.
  *
- * Protocol: CDC serial at 115200 baud, plain ASCII commands terminated with \r\n
- * Common Chameleon commands:
- *   VERSION        - firmware version
- *   CONFIG?        - list available modes
- *   CONFIG=<mode>  - set emulation mode (e.g. MF_CLASSIC_1K)
- *   UID?           - read current UID
- *   UID=<hex>      - set UID (e.g. AABBCCDD)
- *   BUTTON=NONE|UID_RANDOM|UID_LEFT_INCREMENT|CYCLE_SETTINGS
- *   UPLOAD         - receive card dump (XModem)
- *   DOWNLOAD       - send card dump (XModem)
- *   RESET          - reboot device
- *   HELP           - list all commands
+ * Chameleon ASCII protocol (115200 baud, \r\n terminated):
+ *   VERSION, HELP, CONFIG?, CONFIG=<mode>, UID?, UID=<hex>,
+ *   UPLOAD, DOWNLOAD, RESET, BUTTON=<action>
  */
 public class ChameleonActivity extends AppCompatActivity {
 
-    private TextView tvTerminal;
-    private EditText etCommand;
-    private Button btnSend, btnConnect, btnHelp, btnVersion, btnUidQuery, btnConfigQuery;
-    private TextView tvDeviceInfo;
+    private TextView tvTerminal, tvDeviceInfo;
+    private EditText etCommand, etUidInput;
+    private Button btnSend, btnConnect;
 
     private UsbDeviceManager usbManager;
     private UsbDevice currentDevice;
@@ -63,14 +52,11 @@ public class ChameleonActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        tvTerminal = findViewById(R.id.tvTerminal);
-        etCommand = findViewById(R.id.etCommand);
-        btnSend = findViewById(R.id.btnSend);
-        btnConnect = findViewById(R.id.btnConnect);
-        btnHelp = findViewById(R.id.btnCmdHelp);
-        btnVersion = findViewById(R.id.btnCmdVersion);
-        btnUidQuery = findViewById(R.id.btnCmdUid);
-        btnConfigQuery = findViewById(R.id.btnCmdConfig);
+        tvTerminal   = findViewById(R.id.tvTerminal);
+        etCommand    = findViewById(R.id.etCommand);
+        etUidInput   = findViewById(R.id.etUidInput);
+        btnSend      = findViewById(R.id.btnSend);
+        btnConnect   = findViewById(R.id.btnConnect);
         tvDeviceInfo = findViewById(R.id.tvDeviceInfo);
 
         tvTerminal.setMovementMethod(new ScrollingMovementMethod());
@@ -79,13 +65,11 @@ public class ChameleonActivity extends AppCompatActivity {
             @Override
             public void onDeviceConnected(UsbDevice device, UsbDeviceManager.DeviceType type) {
                 currentDevice = device;
-                String label = type == UsbDeviceManager.DeviceType.CHAMELEON_ULTRA ? "Chameleon Ultra"
-                    : type == UsbDeviceManager.DeviceType.CHAMELEON_MINI ? "Chameleon Mini"
-                    : type == UsbDeviceManager.DeviceType.LEXI_RFID ? "LEXI RFID Device"
-                    : "USB Serial Device";
-                tvDeviceInfo.setText(label + " connected");
-                appendLog("Connected: " + label + "\nVID=" + String.format("%04X", device.getVendorId())
-                    + " PID=" + String.format("%04X", device.getProductId()));
+                String label = deviceLabel(type, device);
+                tvDeviceInfo.setText(label + " — connected");
+                appendLog("✔ " + label + " connected"
+                    + "  VID=" + String.format("%04X", device.getVendorId())
+                    + "  PID=" + String.format("%04X", device.getProductId()));
                 setControlsEnabled(true);
                 openRawUsb(device);
             }
@@ -100,35 +84,64 @@ public class ChameleonActivity extends AppCompatActivity {
             @Override
             public void onPermissionDenied(UsbDevice device) {
                 Toast.makeText(ChameleonActivity.this, "USB permission denied", Toast.LENGTH_SHORT).show();
-                appendLog("Permission denied for device.");
+                appendLog("Permission denied.");
             }
-            @Override
-            public void onDataReceived(String data) { appendLog(data); }
-            @Override
-            public void onError(String error) { appendLog("Error: " + error); }
+            @Override public void onDataReceived(String data) { appendLog(data); }
+            @Override public void onError(String error) { appendLog("Error: " + error); }
         });
         usbManager.register();
 
+        // Quick commands
         btnConnect.setOnClickListener(v -> scanAndConnect());
         btnSend.setOnClickListener(v -> sendUserCommand());
-        btnHelp.setOnClickListener(v -> sendSerial("HELP\r\n"));
-        btnVersion.setOnClickListener(v -> sendSerial("VERSION\r\n"));
-        btnUidQuery.setOnClickListener(v -> sendSerial("UID?\r\n"));
-        btnConfigQuery.setOnClickListener(v -> sendSerial("CONFIG?\r\n"));
+        findViewById(R.id.btnCmdHelp).setOnClickListener(v -> sendSerial("HELP\r\n"));
+        findViewById(R.id.btnCmdVersion).setOnClickListener(v -> sendSerial("VERSION\r\n"));
+        findViewById(R.id.btnCmdUid).setOnClickListener(v -> sendSerial("UID?\r\n"));
+        findViewById(R.id.btnCmdConfig).setOnClickListener(v -> sendSerial("CONFIG?\r\n"));
+        findViewById(R.id.btnCmdReset).setOnClickListener(v -> sendSerial("RESET\r\n"));
+
+        // Mode buttons
+        findViewById(R.id.btnMode1k).setOnClickListener(v -> setMode("MF_CLASSIC_1K"));
+        findViewById(R.id.btnMode4k).setOnClickListener(v -> setMode("MF_CLASSIC_4K"));
+        findViewById(R.id.btnModeUl).setOnClickListener(v -> setMode("MF_ULTRALIGHT"));
+        findViewById(R.id.btnModeSniff).setOnClickListener(v -> setMode("ISO14443A_SNIFF"));
+        findViewById(R.id.btnModeOff).setOnClickListener(v -> setMode("NONE"));
+
+        // UID setter
+        findViewById(R.id.btnSetUid).setOnClickListener(v -> {
+            String uid = etUidInput.getText().toString().trim().toUpperCase()
+                .replaceAll("[^0-9A-F]", "");
+            if (uid.isEmpty()) { Toast.makeText(this, "Enter a UID hex value", Toast.LENGTH_SHORT).show(); return; }
+            appendLog("> UID=" + uid);
+            sendSerial("UID=" + uid + "\r\n");
+            etUidInput.setText("");
+        });
+
+        // IME send on keyboard action
+        etCommand.setOnEditorActionListener((v, action, event) -> {
+            sendUserCommand();
+            return true;
+        });
 
         setControlsEnabled(false);
         scanAndConnect();
     }
 
+    private void setMode(String mode) {
+        appendLog("> CONFIG=" + mode);
+        sendSerial("CONFIG=" + mode + "\r\n");
+    }
+
     private void scanAndConnect() {
         List<UsbDevice> devices = usbManager.findSupportedDevices();
         if (devices.isEmpty()) {
-            appendLog("No supported USB device found.\nConnect your Chameleon or LEXI device via USB-OTG.");
-            tvDeviceInfo.setText("No device — connect via USB-OTG");
+            appendLog("No supported USB device found.\nPlug in your device via USB-C adapter, then tap [Scan USB].");
+            tvDeviceInfo.setText("No device — connect via USB-C adapter");
         } else {
             UsbDevice dev = devices.get(0);
-            appendLog("Found: " + dev.getProductName() + " VID=" +
-                String.format("%04X", dev.getVendorId()) + " PID=" + String.format("%04X", dev.getProductId()));
+            appendLog("Found: " + (dev.getProductName() != null ? dev.getProductName() : "USB Device")
+                + "  VID=" + String.format("%04X", dev.getVendorId())
+                + "  PID=" + String.format("%04X", dev.getProductId()));
             usbManager.requestPermissionAndConnect(dev);
         }
     }
@@ -138,7 +151,7 @@ public class ChameleonActivity extends AppCompatActivity {
         rawConnection = um.openDevice(device);
         if (rawConnection == null) { appendLog("Failed to open USB connection"); return; }
 
-        // Find the first bulk-transfer interface
+        // Find bulk-transfer interface (handles both CDC-ACM and raw serial)
         for (int i = 0; i < device.getInterfaceCount(); i++) {
             UsbInterface iface = device.getInterface(i);
             rawConnection.claimInterface(iface, true);
@@ -157,14 +170,19 @@ public class ChameleonActivity extends AppCompatActivity {
                 break;
             }
         }
-        if (epOut == null) { appendLog("No bulk endpoints found — device may need CDC-ACM driver"); return; }
+        if (epOut == null) {
+            appendLog("No bulk endpoints — device may need a different driver");
+            return;
+        }
         startReading();
+        // Auto-query firmware version on connect
+        mainHandler.postDelayed(() -> sendSerial("VERSION\r\n"), 500);
     }
 
     private void startReading() {
         reading = true;
         executor.submit(() -> {
-            byte[] buf = new byte[64];
+            byte[] buf = new byte[256];
             while (reading && rawConnection != null) {
                 int n = rawConnection.bulkTransfer(epIn, buf, buf.length, 200);
                 if (n > 0) {
@@ -185,7 +203,7 @@ public class ChameleonActivity extends AppCompatActivity {
 
     private void sendSerial(String cmd) {
         if (rawConnection == null || epOut == null) {
-            appendLog("Not connected");
+            appendLog("Not connected — tap [Scan USB] first");
             return;
         }
         executor.submit(() -> {
@@ -197,7 +215,6 @@ public class ChameleonActivity extends AppCompatActivity {
     private void appendLog(String text) {
         mainHandler.post(() -> {
             tvTerminal.append(text.endsWith("\n") ? text : text + "\n");
-            // Auto-scroll
             int scroll = tvTerminal.getLayout() == null ? 0 :
                 tvTerminal.getLayout().getLineTop(tvTerminal.getLineCount()) - tvTerminal.getHeight();
             if (scroll > 0) tvTerminal.scrollTo(0, scroll);
@@ -206,11 +223,28 @@ public class ChameleonActivity extends AppCompatActivity {
 
     private void setControlsEnabled(boolean enabled) {
         btnSend.setEnabled(enabled);
-        btnHelp.setEnabled(enabled);
-        btnVersion.setEnabled(enabled);
-        btnUidQuery.setEnabled(enabled);
-        btnConfigQuery.setEnabled(enabled);
         etCommand.setEnabled(enabled);
+        etUidInput.setEnabled(enabled);
+        int[] modeIds = {R.id.btnMode1k, R.id.btnMode4k, R.id.btnModeUl,
+                         R.id.btnModeSniff, R.id.btnModeOff, R.id.btnSetUid,
+                         R.id.btnCmdHelp, R.id.btnCmdVersion, R.id.btnCmdUid,
+                         R.id.btnCmdConfig, R.id.btnCmdReset};
+        for (int id : modeIds) {
+            View v = findViewById(id);
+            if (v != null) v.setEnabled(enabled);
+        }
+    }
+
+    private String deviceLabel(UsbDeviceManager.DeviceType type, UsbDevice device) {
+        switch (type) {
+            case CHAMELEON_ULTRA: return "Chameleon Ultra";
+            case CHAMELEON_MINI:  return "Chameleon Mini";
+            case LEXI_RFID:       return "LEXI RFID Device";
+            case GENERIC_SERIAL:  return "USB Serial Device";
+            default:
+                String name = device.getProductName();
+                return name != null ? name : "USB Device";
+        }
     }
 
     @Override

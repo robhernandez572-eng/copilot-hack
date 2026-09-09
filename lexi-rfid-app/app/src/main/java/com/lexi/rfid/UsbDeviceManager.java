@@ -16,9 +16,15 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Manages USB connections for:
- *   - LEXI RFID/NFC Duplicator (CP210x, CH340, or similar USB-serial bridge)
- *   - Chameleon Mini / Chameleon Ultra (CDC ACM)
+ * USB device detection and connection manager.
+ *
+ * Detects:
+ *   LEXI RFID/NFC Duplicator — CP210x (Silicon Labs), CH340/CH341 (Qinheng), FTDI FT232
+ *   Chameleon Mini / Chameleon Ultra — VID 0x16D0
+ *   Generic CDC-ACM serial devices
+ *
+ * Works over USB-C to USB-A adapters (the adapter is transparent; Android sees the
+ * downstream device's VID/PID as-is).
  */
 public class UsbDeviceManager {
 
@@ -40,17 +46,41 @@ public class UsbDeviceManager {
         UNKNOWN
     }
 
-    // Vendor/Product IDs
-    private static final int VID_SILICON_LABS = 0x10C4;  // CP210x (used by many RFID readers)
-    private static final int PID_CP2102 = 0xEA60;
-    private static final int VID_QINHENG = 0x1A86;        // CH340/CH341
-    private static final int PID_CH340 = 0x7523;
-    private static final int VID_FTDI = 0x0403;
-    private static final int PID_FT232 = 0x6001;
-    private static final int VID_CHAMELEON = 0x16D0;       // Chameleon Mini/Ultra
-    private static final int PID_CHAMELEON_MINI = 0x04B2;
-    private static final int PID_CHAMELEON_ULTRA = 0x06C2;
-    private static final int VID_CDC_ACM = 0x03EB;         // Atmel CDC (also used by some Chameleons)
+    // ── Silicon Labs CP210x family ────────────────────────────────────────
+    private static final int VID_SILABS = 0x10C4;
+    private static final int PID_CP2102 = 0xEA60;  // CP2102/CP2109
+    private static final int PID_CP2104 = 0xEA70;  // CP2104
+    private static final int PID_CP2108 = 0xEA71;  // CP2108
+    private static final int PID_CP2110 = 0xEA80;  // CP2110
+    private static final int PID_CP2112 = 0xEA90;  // CP2112
+
+    // ── Qinheng CH340 / CH341 family ─────────────────────────────────────
+    private static final int VID_QINHENG = 0x1A86;
+    private static final int PID_CH340   = 0x7523;  // CH340
+    private static final int PID_CH341   = 0x5523;  // CH341
+    private static final int PID_CH341A  = 0x5512;  // CH341A
+    private static final int PID_CH9102  = 0x55D4;  // CH9102 (newer variant)
+
+    // ── FTDI ──────────────────────────────────────────────────────────────
+    private static final int VID_FTDI   = 0x0403;
+    private static final int PID_FT232  = 0x6001;
+    private static final int PID_FT2232 = 0x6010;
+    private static final int PID_FT4232 = 0x6011;
+    private static final int PID_FT232H = 0x6014;
+    private static final int PID_FT230X = 0x6015;
+
+    // ── Prolific PL2303 ───────────────────────────────────────────────────
+    private static final int VID_PROLIFIC = 0x067B;
+    private static final int PID_PL2303   = 0x2303;
+
+    // ── Chameleon Mini / Ultra ────────────────────────────────────────────
+    private static final int VID_CHAMELEON        = 0x16D0;
+    private static final int PID_CHAMELEON_MINI   = 0x04B2;
+    private static final int PID_CHAMELEON_ULTRA  = 0x06C2;
+
+    // ── Atmel/Microchip CDC-ACM (alternate Chameleon firmware) ────────────
+    private static final int VID_ATMEL  = 0x03EB;
+    private static final int PID_ATMEL_CDC = 0x2404;
 
     private final Context context;
     private final UsbManager usbManager;
@@ -60,9 +90,6 @@ public class UsbDeviceManager {
     private UsbDevice connectedDevice;
     private UsbDeviceConnection connection;
     private DeviceType connectedType = DeviceType.UNKNOWN;
-
-    // Simple byte buffer for incoming serial data
-    private final StringBuilder rxBuffer = new StringBuilder();
 
     private final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
         @Override
@@ -103,14 +130,65 @@ public class UsbDeviceManager {
         try { context.unregisterReceiver(usbReceiver); } catch (Exception ignored) {}
     }
 
-    /** Returns all recognized RFID/Chameleon USB devices currently connected. */
+    /** All recognized devices currently connected. */
     public List<UsbDevice> findSupportedDevices() {
         List<UsbDevice> result = new ArrayList<>();
         HashMap<String, UsbDevice> devices = usbManager.getDeviceList();
         for (UsbDevice dev : devices.values()) {
-            if (getDeviceType(dev) != DeviceType.UNKNOWN) result.add(dev);
+            if (classify(dev) != DeviceType.UNKNOWN) result.add(dev);
         }
         return result;
+    }
+
+    /** Classify a USB device by VID/PID and class. Public for use in UI. */
+    public DeviceType classify(UsbDevice dev) {
+        int vid = dev.getVendorId();
+        int pid = dev.getProductId();
+
+        // Chameleon by VID/PID
+        if (vid == VID_CHAMELEON) {
+            if (pid == PID_CHAMELEON_MINI) return DeviceType.CHAMELEON_MINI;
+            if (pid == PID_CHAMELEON_ULTRA) return DeviceType.CHAMELEON_ULTRA;
+        }
+
+        // Chameleon by product name (alternate firmware VIDs)
+        String name = dev.getProductName();
+        if (name != null) {
+            String lc = name.toLowerCase();
+            if (lc.contains("chameleon")) {
+                return lc.contains("ultra") ? DeviceType.CHAMELEON_ULTRA : DeviceType.CHAMELEON_MINI;
+            }
+            if (lc.contains("lexi") || lc.contains("rfid") || lc.contains("nfc duplicat")) {
+                return DeviceType.LEXI_RFID;
+            }
+        }
+
+        // Known serial bridge chips used by LEXI and other RFID readers
+        if (vid == VID_SILABS && (pid == PID_CP2102 || pid == PID_CP2104 ||
+                pid == PID_CP2108 || pid == PID_CP2110 || pid == PID_CP2112)) {
+            return DeviceType.LEXI_RFID;
+        }
+        if (vid == VID_QINHENG && (pid == PID_CH340 || pid == PID_CH341 ||
+                pid == PID_CH341A || pid == PID_CH9102)) {
+            return DeviceType.LEXI_RFID;
+        }
+        if (vid == VID_FTDI && (pid == PID_FT232 || pid == PID_FT2232 ||
+                pid == PID_FT4232 || pid == PID_FT232H || pid == PID_FT230X)) {
+            return DeviceType.LEXI_RFID;
+        }
+        if (vid == VID_PROLIFIC && pid == PID_PL2303) {
+            return DeviceType.LEXI_RFID;
+        }
+
+        // Atmel CDC (alternate Chameleon / generic serial)
+        if (vid == VID_ATMEL && pid == PID_ATMEL_CDC) return DeviceType.GENERIC_SERIAL;
+
+        // Any device advertising CDC-ACM interface class
+        if (dev.getInterfaceCount() > 0 && dev.getInterface(0).getInterfaceClass() == 0x02) {
+            return DeviceType.GENERIC_SERIAL;
+        }
+
+        return DeviceType.UNKNOWN;
     }
 
     public void requestPermissionAndConnect(UsbDevice device) {
@@ -123,36 +201,8 @@ public class UsbDeviceManager {
         }
     }
 
-    private DeviceType getDeviceType(UsbDevice dev) {
-        int vid = dev.getVendorId();
-        int pid = dev.getProductId();
-        if (vid == VID_CHAMELEON) {
-            if (pid == PID_CHAMELEON_MINI) return DeviceType.CHAMELEON_MINI;
-            if (pid == PID_CHAMELEON_ULTRA) return DeviceType.CHAMELEON_ULTRA;
-        }
-        // Check product name for Chameleon (some revisions use different VID)
-        String name = dev.getProductName();
-        if (name != null && name.toLowerCase().contains("chameleon")) {
-            return name.toLowerCase().contains("ultra") ?
-                DeviceType.CHAMELEON_ULTRA : DeviceType.CHAMELEON_MINI;
-        }
-        if ((vid == VID_SILICON_LABS && pid == PID_CP2102) ||
-            (vid == VID_QINHENG && pid == PID_CH340) ||
-            (vid == VID_FTDI && pid == PID_FT232)) {
-            // Likely the LEXI device or another serial RFID reader
-            return DeviceType.LEXI_RFID;
-        }
-        if (dev.getInterfaceCount() > 0) {
-            // Check for CDC ACM class (0x02) — generic serial, possibly Chameleon alternate VID
-            if (dev.getInterface(0).getInterfaceClass() == 0x02) {
-                return DeviceType.GENERIC_SERIAL;
-            }
-        }
-        return DeviceType.UNKNOWN;
-    }
-
     private void openDevice(UsbDevice device) {
-        connectedType = getDeviceType(device);
+        connectedType = classify(device);
         connectedDevice = device;
         connection = usbManager.openDevice(device);
         if (connection == null) {
@@ -171,16 +221,4 @@ public class UsbDeviceManager {
     public boolean isConnected() { return connection != null; }
     public DeviceType getConnectedType() { return connectedType; }
     public UsbDevice getConnectedDevice() { return connectedDevice; }
-
-    /** Send a text command (adds \r\n automatically). */
-    public void sendCommand(String cmd) {
-        if (!isConnected()) {
-            mainHandler.post(() -> listener.onError("No device connected"));
-            return;
-        }
-        // For actual byte-level transfers the UsbSerial library handles this;
-        // this method is a stub that wraps the command for the Chameleon protocol.
-        // Integration via UsbSerial happens in ChameleonFragment.
-        mainHandler.post(() -> listener.onDataReceived("CMD> " + cmd));
-    }
 }
