@@ -2,14 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_scanner"
-        android:icon="@android:drawable/ic_menu_compass"
+        android:icon="@drawable/ic_nav_scanner"
         android:title="NFC Scanner" />
     <item
         android:id="@+id/nav_library"
-        android:icon="@android:drawable/ic_menu_agenda"
+        android:icon="@drawable/ic_nav_library"
         android:title="Card Library" />
     <item
         android:id="@+id/nav_usb"
-        android:icon="@android:drawable/ic_menu_manage"
+        android:icon="@drawable/ic_nav_usb"
         android:title="USB Device" />
 </menu>
