@@ -158,6 +158,10 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, ChameleonActivity.class)));
         findViewById(R.id.btnOpenMagSpoof).setOnClickListener(v ->
             startActivity(new Intent(this, MagSpoofActivity.class)));
+        findViewById(R.id.btnOpenBruceSim).setOnClickListener(v ->
+            startActivity(new Intent(this, BruceSimActivity.class)));
+        findViewById(R.id.btnOpenBoardWeb).setOnClickListener(v ->
+            startActivity(new Intent(this, BoardWebActivity.class)));
 
         setupNfc();
         setupUsb();

@@ -279,6 +279,24 @@
                 android:text="Open MagSpoof V5"
                 android:backgroundTint="#1B5E20" />
 
+            <!-- Bruce OS simulator button -->
+            <Button
+                android:id="@+id/btnOpenBruceSim"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Bruce OS Simulator (demo)"
+                android:backgroundTint="#4A148C" />
+
+            <!-- Board web UI companion button -->
+            <Button
+                android:id="@+id/btnOpenBoardWeb"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Connect to Board (Web UI)"
+                android:backgroundTint="#006064" />
+
             <!-- BLE Chameleon Ultra card -->
             <androidx.cardview.widget.CardView
                 xmlns:card="http://schemas.android.com/apk/res-auto"
