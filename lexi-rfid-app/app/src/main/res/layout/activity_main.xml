@@ -270,6 +270,110 @@
                 android:text="Open USB Terminal"
                 android:backgroundTint="#1565C0" />
 
+            <!-- MagSpoof button -->
+            <Button
+                android:id="@+id/btnOpenMagSpoof"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Open MagSpoof V5"
+                android:backgroundTint="#1B5E20" />
+
+            <!-- Bruce OS simulator button -->
+            <Button
+                android:id="@+id/btnOpenBruceSim"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Bruce OS Simulator (demo)"
+                android:backgroundTint="#4A148C" />
+
+            <!-- Board web UI companion button -->
+            <Button
+                android:id="@+id/btnOpenBoardWeb"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Connect to Board (Web UI)"
+                android:backgroundTint="#006064" />
+
+            <!-- BLE Chameleon Ultra card -->
+            <androidx.cardview.widget.CardView
+                xmlns:card="http://schemas.android.com/apk/res-auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                card:cardCornerRadius="8dp"
+                card:cardElevation="4dp"
+                card:cardBackgroundColor="#16213E">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BLUETOOTH — CHAMELEON ULTRA"
+                        android:textColor="#29B6F6"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.15"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:id="@+id/tvBleStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Not connected"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:id="@+id/tvBleDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Tap Scan to discover Chameleon Ultra over BLE"
+                        android:textColor="#607D8B"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp">
+
+                        <Button
+                            android:id="@+id/btnScanBle"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="6dp"
+                            android:text="Scan BLE"
+                            android:textSize="13sp"
+                            android:backgroundTint="#0F3460" />
+
+                        <Button
+                            android:id="@+id/btnDisconnectBle"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="6dp"
+                            android:text="Disconnect"
+                            android:textSize="13sp"
+                            android:backgroundTint="#B71C1C"
+                            android:enabled="false" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
             <!-- Device info card -->
             <androidx.cardview.widget.CardView
                 xmlns:card="http://schemas.android.com/apk/res-auto"

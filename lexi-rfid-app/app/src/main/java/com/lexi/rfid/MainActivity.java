@@ -1,25 +1,34 @@
 package com.lexi.rfid;
 
+import android.Manifest;
 import android.app.PendingIntent;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -51,6 +60,21 @@ public class MainActivity extends AppCompatActivity {
     // USB
     private UsbDeviceManager usbDeviceManager;
 
+    // BLE — Chameleon Ultra
+    private ChameleonBleManager bleManager;
+    private TextView tvBleStatus, tvBleDetail;
+    private Button btnScanBle, btnDisconnectBle;
+    private final List<BluetoothDevice> bleFoundDevices = new ArrayList<>();
+    private final List<String> bleFoundNames = new ArrayList<>();
+
+    private final ActivityResultLauncher<String[]> blePermLauncher =
+        registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), grants -> {
+            boolean allGranted = true;
+            for (Boolean v : grants.values()) if (!v) { allGranted = false; break; }
+            if (allGranted) startBleScan();
+            else Toast.makeText(this, "Bluetooth permission required for BLE scan", Toast.LENGTH_LONG).show();
+        });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +98,10 @@ public class MainActivity extends AppCompatActivity {
         btnWrite = findViewById(R.id.btnWrite);
         btnScanUsb = findViewById(R.id.btnScanUsb);
         layoutWritePicker = findViewById(R.id.layoutWritePicker);
+        tvBleStatus = findViewById(R.id.tvBleStatus);
+        tvBleDetail = findViewById(R.id.tvBleDetail);
+        btnScanBle = findViewById(R.id.btnScanBle);
+        btnDisconnectBle = findViewById(R.id.btnDisconnectBle);
 
         // Library recycler
         cards = storage.loadCards();
@@ -128,12 +156,21 @@ public class MainActivity extends AppCompatActivity {
         btnScanUsb.setOnClickListener(v -> scanUsb());
         findViewById(R.id.btnOpenTerminal).setOnClickListener(v ->
             startActivity(new Intent(this, ChameleonActivity.class)));
+        findViewById(R.id.btnOpenMagSpoof).setOnClickListener(v ->
+            startActivity(new Intent(this, MagSpoofActivity.class)));
+        findViewById(R.id.btnOpenBruceSim).setOnClickListener(v ->
+            startActivity(new Intent(this, BruceSimActivity.class)));
+        findViewById(R.id.btnOpenBoardWeb).setOnClickListener(v ->
+            startActivity(new Intent(this, BoardWebActivity.class)));
 
         setupNfc();
         setupUsb();
+        setupBle();
         updateEmptyView();
         showTab(0);
         handleIntent(getIntent());
+        // Auto-scan for already-connected USB devices on startup
+        scanUsb();
     }
 
     private void showTab(int index) {
@@ -269,6 +306,17 @@ public class MainActivity extends AppCompatActivity {
     private void handleIntent(Intent intent) {
         if (intent == null) return;
         String action = intent.getAction();
+        if (android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            android.hardware.usb.UsbDevice dev =
+                intent.getParcelableExtra(android.hardware.usb.UsbManager.EXTRA_DEVICE);
+            if (dev != null) {
+                usbDeviceManager.requestPermissionAndConnect(dev);
+                BottomNavigationView nav = findViewById(R.id.bottomNav);
+                nav.setSelectedItemId(R.id.nav_usb);
+                showTab(2);
+            }
+            return;
+        }
         if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
                 || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
                 || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
@@ -377,6 +425,144 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ── BLE ───────────────────────────────────────────────────────────────
+
+    private void setupBle() {
+        bleManager = new ChameleonBleManager(this);
+        btnScanBle.setOnClickListener(v -> requestBlePermissionsAndScan());
+        btnDisconnectBle.setOnClickListener(v -> {
+            bleManager.disconnect();
+            tvBleStatus.setText("Disconnected");
+            tvBleStatus.setTextColor(0xFFFFFFFF);
+            tvBleDetail.setText("Tap Scan BLE to reconnect");
+            btnDisconnectBle.setEnabled(false);
+            btnScanBle.setEnabled(true);
+        });
+    }
+
+    private void requestBlePermissionsAndScan() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            boolean hasScan = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+            boolean hasConnect = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+            if (hasScan && hasConnect) {
+                startBleScan();
+            } else {
+                blePermLauncher.launch(new String[]{
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                });
+            }
+        } else {
+            boolean hasLoc = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+            if (hasLoc) {
+                startBleScan();
+            } else {
+                blePermLauncher.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION});
+            }
+        }
+    }
+
+    private void startBleScan() {
+        if (!bleManager.isBluetoothAvailable()) {
+            Toast.makeText(this, "Bluetooth is off — please enable it", Toast.LENGTH_LONG).show();
+            return;
+        }
+        bleFoundDevices.clear();
+        bleFoundNames.clear();
+        tvBleStatus.setText("Scanning for Chameleon Ultra...");
+        tvBleStatus.setTextColor(0xFFFFFFFF);
+        tvBleDetail.setText("BLE scan in progress (12 s)");
+        btnScanBle.setEnabled(false);
+
+        bleManager.startScan(new ChameleonBleManager.BleListener() {
+            @Override public void onDeviceFound(BluetoothDevice device, String name, int rssi) {
+                if (!bleFoundDevices.contains(device)) {
+                    bleFoundDevices.add(device);
+                    bleFoundNames.add(name + "  [" + rssi + " dBm]");
+                }
+                tvBleDetail.setText("Found " + bleFoundDevices.size() + " device(s)…");
+                if (bleFoundDevices.size() == 1) showBlePickerDialog();
+            }
+            @Override public void onConnected(BluetoothDevice device) {
+                bleManager.stopScan();
+                tvBleStatus.setText("Connected: " + (device.getName() != null ? device.getName() : device.getAddress()));
+                tvBleStatus.setTextColor(0xFF00C853);
+                tvBleDetail.setText("Chameleon Ultra ready via BLE");
+                btnScanBle.setEnabled(true);
+                btnDisconnectBle.setEnabled(true);
+            }
+            @Override public void onDisconnected() {
+                tvBleStatus.setText("BLE Disconnected");
+                tvBleStatus.setTextColor(0xFFFFFFFF);
+                tvBleDetail.setText("Tap Scan BLE to reconnect");
+                btnDisconnectBle.setEnabled(false);
+                btnScanBle.setEnabled(true);
+            }
+            @Override public void onDataReceived(String data) {}
+            @Override public void onError(String message) {
+                tvBleStatus.setText("BLE Error");
+                tvBleDetail.setText(message);
+                tvBleStatus.setTextColor(0xFFF44336);
+                btnScanBle.setEnabled(true);
+            }
+        });
+
+        // Auto-show picker after scan timeout
+        tabUsb.postDelayed(() -> {
+            bleManager.stopScan();
+            btnScanBle.setEnabled(true);
+            if (bleFoundDevices.isEmpty()) {
+                tvBleStatus.setText("No Chameleon Ultra found");
+                tvBleDetail.setText("Ensure device is powered on and in BLE range");
+            } else {
+                showBlePickerDialog();
+            }
+        }, 12_500);
+    }
+
+    private void showBlePickerDialog() {
+        if (bleFoundDevices.isEmpty()) return;
+        String[] items = bleFoundNames.toArray(new String[0]);
+        new AlertDialog.Builder(this)
+            .setTitle("Select Chameleon Ultra")
+            .setItems(items, (d, which) -> {
+                BluetoothDevice chosen = bleFoundDevices.get(which);
+                bleManager.stopScan();
+                tvBleStatus.setText("Connecting…");
+                tvBleDetail.setText(chosen.getAddress());
+                btnScanBle.setEnabled(false);
+                bleManager.connect(chosen, new ChameleonBleManager.BleListener() {
+                    @Override public void onDeviceFound(BluetoothDevice device, String name, int rssi) {}
+                    @Override public void onConnected(BluetoothDevice device) {
+                        tvBleStatus.setText("Connected: " + (device.getName() != null ? device.getName() : device.getAddress()));
+                        tvBleStatus.setTextColor(0xFF00C853);
+                        tvBleDetail.setText("Chameleon Ultra ready via BLE");
+                        btnScanBle.setEnabled(true);
+                        btnDisconnectBle.setEnabled(true);
+                    }
+                    @Override public void onDisconnected() {
+                        tvBleStatus.setText("BLE Disconnected");
+                        tvBleStatus.setTextColor(0xFFFFFFFF);
+                        tvBleDetail.setText("Tap Scan BLE to reconnect");
+                        btnDisconnectBle.setEnabled(false);
+                        btnScanBle.setEnabled(true);
+                    }
+                    @Override public void onDataReceived(String data) {}
+                    @Override public void onError(String message) {
+                        tvBleStatus.setText("BLE Error");
+                        tvBleDetail.setText(message);
+                        tvBleStatus.setTextColor(0xFFF44336);
+                        btnScanBle.setEnabled(true);
+                    }
+                });
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
     // ── HELPERS ───────────────────────────────────────────────────────────
 
     private void refreshLibrary() {
@@ -453,5 +639,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         usbDeviceManager.unregister();
+        if (bleManager != null) {
+            bleManager.stopScan();
+            bleManager.disconnect();
+        }
     }
 }

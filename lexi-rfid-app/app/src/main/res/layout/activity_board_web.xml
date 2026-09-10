@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1A1A2E">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/etBoardUrl"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="192.168.4.1  (board IP or hostname)"
+            android:textColorHint="#607D8B"
+            android:textColor="#00FF41"
+            android:background="#0D0D0D"
+            android:padding="10dp"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:inputType="textUri"
+            android:maxLines="1"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/btnBoardGo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="Connect"
+            android:textSize="12sp"
+            android:backgroundTint="#1565C0" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvBoardHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:text="Join the board's WiFi AP (or same LAN), then Connect. Default AP IP is often 192.168.4.1."
+        android:textColor="#607D8B"
+        android:textSize="11sp"
+        android:fontFamily="monospace" />
+
+    <WebView
+        android:id="@+id/webBoard"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#FFFFFF" />
+
+</LinearLayout>
