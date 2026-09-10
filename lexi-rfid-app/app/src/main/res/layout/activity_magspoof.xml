@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1A1A2E">
+
+    <!-- Device status bar -->
+    <TextView
+        android:id="@+id/tvMsDeviceInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#0F3460"
+        android:padding="10dp"
+        android:text="No device connected"
+        android:textColor="#29B6F6"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <!-- Track inputs -->
+    <androidx.cardview.widget.CardView
+        xmlns:card="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        card:cardCornerRadius="6dp"
+        card:cardBackgroundColor="#16213E">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TRACK DATA"
+                android:textColor="#29B6F6"
+                android:textSize="10sp"
+                android:letterSpacing="0.15"
+                android:fontFamily="monospace" />
+
+            <!-- Track 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <EditText
+                    android:id="@+id/etTrack1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="%B1234567890^NAME^YYMM?"
+                    android:textColorHint="#607D8B"
+                    android:textColor="#00FF41"
+                    android:background="#0D0D0D"
+                    android:padding="8dp"
+                    android:textSize="11sp"
+                    android:fontFamily="monospace"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:singleLine="true" />
+
+                <Button
+                    android:id="@+id/btnSetTrack1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Set T1"
+                    android:textSize="11sp"
+                    android:backgroundTint="#0F3460"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp" />
+            </LinearLayout>
+
+            <!-- Track 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="6dp">
+
+                <EditText
+                    android:id="@+id/etTrack2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint=";1234567890=YYMM?"
+                    android:textColorHint="#607D8B"
+                    android:textColor="#00FF41"
+                    android:background="#0D0D0D"
+                    android:padding="8dp"
+                    android:textSize="11sp"
+                    android:fontFamily="monospace"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:singleLine="true" />
+
+                <Button
+                    android:id="@+id/btnSetTrack2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Set T2"
+                    android:textSize="11sp"
+                    android:backgroundTint="#0F3460"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Play / control buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <Button
+            android:id="@+id/btnPlayT1"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Play T1"
+            android:textSize="12sp"
+            android:backgroundTint="#1B5E20" />
+
+        <Button
+            android:id="@+id/btnPlayT2"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Play T2"
+            android:textSize="12sp"
+            android:backgroundTint="#1B5E20" />
+
+        <Button
+            android:id="@+id/btnPlayBoth"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Play Both"
+            android:textSize="12sp"
+            android:backgroundTint="#388E3C" />
+
+    </LinearLayout>
+
+    <!-- Secondary buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="6dp">
+
+        <Button
+            android:id="@+id/btnMsSaveEeprom"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Save EEPROM"
+            android:textSize="10sp"
+            android:backgroundTint="#0F3460" />
+
+        <Button
+            android:id="@+id/btnMsShowRam"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Show RAM"
+            android:textSize="10sp"
+            android:backgroundTint="#0F3460" />
+
+        <Button
+            android:id="@+id/btnMsShowEeprom"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Show EEPROM"
+            android:textSize="10sp"
+            android:backgroundTint="#0F3460" />
+
+        <Button
+            android:id="@+id/btnMsHelp"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="0.6"
+            android:text="Help"
+            android:textSize="10sp"
+            android:backgroundTint="#37474F" />
+
+    </LinearLayout>
+
+    <!-- Connect button -->
+    <Button
+        android:id="@+id/btnMsConnect"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="6dp"
+        android:text="Scan &amp; Connect USB"
+        android:textSize="13sp"
+        android:backgroundTint="#1565C0" />
+
+    <!-- Log output -->
+    <TextView
+        android:id="@+id/tvMsLog"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_margin="8dp"
+        android:background="#0D0D0D"
+        android:padding="8dp"
+        android:textColor="#00FF41"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:scrollbars="vertical" />
+
+</LinearLayout>

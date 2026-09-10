@@ -156,6 +156,8 @@ public class MainActivity extends AppCompatActivity {
         btnScanUsb.setOnClickListener(v -> scanUsb());
         findViewById(R.id.btnOpenTerminal).setOnClickListener(v ->
             startActivity(new Intent(this, ChameleonActivity.class)));
+        findViewById(R.id.btnOpenMagSpoof).setOnClickListener(v ->
+            startActivity(new Intent(this, MagSpoofActivity.class)));
 
         setupNfc();
         setupUsb();
