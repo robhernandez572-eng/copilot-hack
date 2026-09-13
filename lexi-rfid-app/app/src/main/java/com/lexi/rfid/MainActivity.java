@@ -400,17 +400,54 @@ public class MainActivity extends AppCompatActivity {
         tvUsbStatus.setText("Scanning...");
         tvUsbStatus.setTextColor(0xFFFFFFFF);
         List<UsbDevice> devices = usbDeviceManager.findSupportedDevices();
-        if (devices.isEmpty()) {
-            tvUsbStatus.setText("No device found");
-            tvUsbDetail.setText("Make sure your device is plugged in via USB-C adapter");
-        } else {
+        if (!devices.isEmpty()) {
             UsbDevice dev = devices.get(0);
             UsbDeviceManager.DeviceType type = usbDeviceManager.classify(dev);
             tvUsbStatus.setText("Found: " + deviceLabel(type, dev));
             tvUsbDetail.setText("VID " + String.format("%04X", dev.getVendorId())
                 + "  PID " + String.format("%04X", dev.getProductId()));
             usbDeviceManager.requestPermissionAndConnect(dev);
+            return;
         }
+        // No recognized device — fall back to showing EVERY USB device so an
+        // unknown LEXI variant can still be seen and connected (diagnostic).
+        List<UsbDevice> all = usbDeviceManager.findAllDevices();
+        if (all.isEmpty()) {
+            tvUsbStatus.setText("No USB device detected");
+            tvUsbDetail.setText("Nothing on the USB bus. Check: (1) phone supports USB-OTG, "
+                + "(2) OTG enabled in settings, (3) adapter + cable both data-capable, "
+                + "(4) LEXI is powered. Then tap Scan again.");
+        } else {
+            showAllUsbDevicesDialog(all);
+        }
+    }
+
+    /** Diagnostic picker: lists all raw USB devices with VID/PID; tap to connect. */
+    private void showAllUsbDevicesDialog(List<UsbDevice> all) {
+        String[] items = new String[all.size()];
+        for (int i = 0; i < all.size(); i++) {
+            UsbDevice d = all.get(i);
+            String name = d.getProductName();
+            String cls = d.getInterfaceCount() > 0
+                ? String.format("%02X", d.getInterface(0).getInterfaceClass()) : "--";
+            items[i] = (name != null ? name : "USB device")
+                + "\nVID " + String.format("%04X", d.getVendorId())
+                + "  PID " + String.format("%04X", d.getProductId())
+                + "  class " + cls;
+        }
+        tvUsbStatus.setText(all.size() + " USB device(s) seen (none auto-recognized)");
+        tvUsbStatus.setTextColor(0xFFFFC107);
+        tvUsbDetail.setText("Tap your LEXI in the list to connect. Note its VID/PID so it can be added permanently.");
+        new AlertDialog.Builder(this)
+            .setTitle("Select USB device to connect")
+            .setItems(items, (d, which) -> {
+                UsbDevice chosen = all.get(which);
+                tvUsbStatus.setText("Connecting: VID " + String.format("%04X", chosen.getVendorId())
+                    + " PID " + String.format("%04X", chosen.getProductId()));
+                usbDeviceManager.forceConnect(chosen);
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
     }
 
     private String deviceLabel(UsbDeviceManager.DeviceType type, UsbDevice dev) {

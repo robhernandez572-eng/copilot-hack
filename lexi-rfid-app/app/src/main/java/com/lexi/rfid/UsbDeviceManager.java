@@ -147,6 +147,16 @@ public class UsbDeviceManager {
         return result;
     }
 
+    /** Every USB device the phone currently sees, recognized or not (diagnostic). */
+    public List<UsbDevice> findAllDevices() {
+        return new ArrayList<>(usbManager.getDeviceList().values());
+    }
+
+    /** Force a connection to a device even if classify() didn't recognize it. */
+    public void forceConnect(UsbDevice device) {
+        requestPermissionAndConnect(device);
+    }
+
     /** Classify a USB device by VID/PID and class. Public for use in UI. */
     public DeviceType classify(UsbDevice dev) {
         int vid = dev.getVendorId();
