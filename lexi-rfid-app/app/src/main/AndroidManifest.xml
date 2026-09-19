@@ -50,5 +50,20 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <!-- USB Memory Browser — opened by "Browse USB Memory Drive" button
+             and auto-launched when a mass storage device is attached -->
+        <activity
+            android:name=".UsbStorageBrowserActivity"
+            android:exported="true"
+            android:parentActivityName=".MainActivity"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_mass_storage_filter" />
+        </activity>
+
     </application>
 </manifest>

@@ -75,6 +75,13 @@ public class MainActivity extends AppCompatActivity {
         btnScanUsb = findViewById(R.id.btnScanUsb);
         layoutWritePicker = findViewById(R.id.layoutWritePicker);
 
+        // USB Memory browse button
+        View btnBrowseMemory = findViewById(R.id.btnBrowseUsbMemory);
+        if (btnBrowseMemory != null) {
+            btnBrowseMemory.setOnClickListener(v ->
+                startActivity(new Intent(this, UsbStorageBrowserActivity.class)));
+        }
+
         // Library recycler
         cards = storage.loadCards();
         adapter = new CardAdapter(cards, new CardAdapter.OnCardClickListener() {
@@ -371,6 +378,7 @@ public class MainActivity extends AppCompatActivity {
             case CHAMELEON_MINI: return "Chameleon Mini";
             case LEXI_RFID: return "LEXI RFID Device";
             case GENERIC_SERIAL: return "USB Serial Device";
+            case USB_STORAGE: return "USB Memory Drive";
             default:
                 String name = dev.getProductName();
                 return name != null ? name : "USB Device";

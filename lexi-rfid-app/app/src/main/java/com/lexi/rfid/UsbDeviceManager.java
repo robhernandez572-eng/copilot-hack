@@ -43,6 +43,7 @@ public class UsbDeviceManager {
         CHAMELEON_ULTRA,
         LEXI_RFID,
         GENERIC_SERIAL,
+        USB_STORAGE,   // USB Mass Storage (thumb drives, card readers, etc.)
         UNKNOWN
     }
 
@@ -186,6 +187,13 @@ public class UsbDeviceManager {
         // Any device advertising CDC-ACM interface class
         if (dev.getInterfaceCount() > 0 && dev.getInterface(0).getInterfaceClass() == 0x02) {
             return DeviceType.GENERIC_SERIAL;
+        }
+
+        // USB Mass Storage (class 0x08) — thumb drives, SD card readers, etc.
+        for (int i = 0; i < dev.getInterfaceCount(); i++) {
+            if (dev.getInterface(i).getInterfaceClass() == 0x08) {
+                return DeviceType.USB_STORAGE;
+            }
         }
 
         return DeviceType.UNKNOWN;
