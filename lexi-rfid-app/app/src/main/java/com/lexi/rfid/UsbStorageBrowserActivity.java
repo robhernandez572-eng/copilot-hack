@@ -24,10 +24,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.github.mjdev.libaums.UsbMassStorageDevice;
-import com.github.mjdev.libaums.fs.FileSystem;
-import com.github.mjdev.libaums.fs.UsbFile;
-import com.github.mjdev.libaums.fs.UsbFileInputStream;
+import me.jahnen.libaums.core.UsbMassStorageDevice;
+import me.jahnen.libaums.core.fs.FileSystem;
+import me.jahnen.libaums.core.fs.UsbFile;
+import me.jahnen.libaums.core.fs.UsbFileInputStream;
+import me.jahnen.libaums.core.partition.Partition;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -139,16 +140,24 @@ public class UsbStorageBrowserActivity extends AppCompatActivity {
                 }
                 target.init();
                 storageDevice = target;
-                // Use first partition
-                fileSystem = target.getPartitions().get(0).getFileSystem();
+
+                List<Partition> partitions = target.getPartitions();
+                if (partitions.isEmpty()) {
+                    showError("No readable partitions found on USB drive.\n\nMake sure the drive is FAT32 or exFAT formatted.");
+                    return;
+                }
+                fileSystem = partitions.get(0).getFileSystem();
                 currentDir = fileSystem.getRootDirectory();
                 List<UsbFile> files = listFiles(currentDir);
+                String label = fileSystem.getVolumeLabel();
+                long cap = fileSystem.getCapacity();
+                long free = fileSystem.getFreeSpace();
                 mainHandler.post(() -> {
                     showProgress(false);
                     tvPath.setText("/");
-                    setStatus("Drive: " + fileSystem.getVolumeLabel()
-                            + "  (" + formatSize(fileSystem.getCapacity()) + " total, "
-                            + formatSize(fileSystem.getFreeSpace()) + " free)");
+                    setStatus((label != null && !label.isEmpty() ? label : "USB Drive")
+                            + "  (" + formatSize(cap) + " total, "
+                            + formatSize(free) + " free)");
                     fileAdapter.setFiles(files);
                 });
             } catch (Exception e) {
@@ -178,10 +187,10 @@ public class UsbStorageBrowserActivity extends AppCompatActivity {
             executor.execute(() -> {
                 try {
                     List<UsbFile> files = listFiles(currentDir);
-                    String path = buildPath();
+                    String path = file.getName();
                     mainHandler.post(() -> {
                         showProgress(false);
-                        tvPath.setText(path);
+                        tvPath.setText("/" + path);
                         fileAdapter.setFiles(files);
                     });
                 } catch (Exception e) {
@@ -204,7 +213,7 @@ public class UsbStorageBrowserActivity extends AppCompatActivity {
         executor.execute(() -> {
             try (InputStream is = new UsbFileInputStream(file)) {
                 BitmapFactory.Options opts = new BitmapFactory.Options();
-                opts.inSampleSize = 2; // Downsample large images
+                opts.inSampleSize = 2;
                 Bitmap bmp = BitmapFactory.decodeStream(is, null, opts);
                 mainHandler.post(() -> {
                     showProgress(false);
@@ -235,7 +244,7 @@ public class UsbStorageBrowserActivity extends AppCompatActivity {
             executor.execute(() -> {
                 try {
                     List<UsbFile> files = listFiles(currentDir);
-                    String path = buildPath();
+                    String path = dirStack.isEmpty() ? "/" : currentDir.getName();
                     mainHandler.post(() -> {
                         showProgress(false);
                         tvPath.setText(path);
@@ -265,14 +274,6 @@ public class UsbStorageBrowserActivity extends AppCompatActivity {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
-
-    private String buildPath() {
-        if (dirStack.isEmpty()) return "/";
-        StringBuilder sb = new StringBuilder("/");
-        // Walk the stack to reconstruct path — simplest approximation
-        sb.append(currentDir.getName());
-        return sb.toString();
-    }
 
     private boolean isImage(String name) {
         return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
