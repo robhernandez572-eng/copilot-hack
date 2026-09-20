@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB Mass Storage class 8 — thumb drives, card readers, external drives -->
+    <usb-device class="8" subclass="6" protocol="80" />
+    <usb-device class="8" subclass="6" protocol="0" />
+    <usb-device class="8" subclass="5" protocol="80" />
+    <usb-device class="8" subclass="5" protocol="0" />
+</resources>

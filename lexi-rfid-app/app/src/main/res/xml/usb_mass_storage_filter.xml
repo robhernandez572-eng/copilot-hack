@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Matches any USB device that exposes a Mass Storage interface (class 0x08).
+  This covers thumb drives, SD card readers, external hard drives, etc.
+  Android will prompt the user to open the USB Memory Browser when one is plugged in.
+-->
+<resources>
+    <usb-device class="8" subclass="6" protocol="80" />
+    <usb-device class="8" subclass="6" protocol="0" />
+    <usb-device class="8" subclass="5" protocol="80" />
+    <usb-device class="8" subclass="5" protocol="0" />
+</resources>
