@@ -43,6 +43,7 @@ public class UsbDeviceManager {
         CHAMELEON_MINI,
         CHAMELEON_ULTRA,
         LEXI_RFID,
+        PROXMARK3,
         GENERIC_SERIAL,
         UNKNOWN
     }
@@ -82,6 +83,12 @@ public class UsbDeviceManager {
     // ── Atmel/Microchip CDC-ACM (alternate Chameleon firmware) ────────────
     private static final int VID_ATMEL  = 0x03EB;
     private static final int PID_ATMEL_CDC = 0x2404;
+
+    // ── Proxmark3 (Iceman / RRG firmware; PM3 Easy) — CDC-ACM ──────────────
+    private static final int VID_PROXMARK   = 0x9AC4;
+    private static final int PID_PROXMARK   = 0x4B8F;
+    private static final int VID_PROXMARK_2 = 0x2D2D;  // proxmark.org bootloader
+    private static final int PID_PROXMARK_2 = 0x504D;
 
     private final Context context;
     private final UsbManager usbManager;
@@ -168,12 +175,21 @@ public class UsbDeviceManager {
             if (pid == PID_CHAMELEON_ULTRA) return DeviceType.CHAMELEON_ULTRA;
         }
 
+        // Proxmark3 (Iceman/RRG firmware, PM3 Easy) by VID/PID
+        if ((vid == VID_PROXMARK && pid == PID_PROXMARK)
+                || (vid == VID_PROXMARK_2 && pid == PID_PROXMARK_2)) {
+            return DeviceType.PROXMARK3;
+        }
+
         // Chameleon by product name (alternate firmware VIDs)
         String name = dev.getProductName();
         if (name != null) {
             String lc = name.toLowerCase();
             if (lc.contains("chameleon")) {
                 return lc.contains("ultra") ? DeviceType.CHAMELEON_ULTRA : DeviceType.CHAMELEON_MINI;
+            }
+            if (lc.contains("proxmark") || lc.contains("pm3")) {
+                return DeviceType.PROXMARK3;
             }
             if (lc.contains("lexi") || lc.contains("rfid") || lc.contains("nfc duplicat")) {
                 return DeviceType.LEXI_RFID;

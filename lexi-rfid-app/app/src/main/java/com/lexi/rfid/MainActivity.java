@@ -455,6 +455,7 @@ public class MainActivity extends AppCompatActivity {
             case CHAMELEON_ULTRA: return "Chameleon Ultra";
             case CHAMELEON_MINI: return "Chameleon Mini";
             case LEXI_RFID: return "LEXI RFID Device";
+            case PROXMARK3: return "Proxmark3 Easy";
             case GENERIC_SERIAL: return "USB Serial Device";
             default:
                 String name = dev.getProductName();
