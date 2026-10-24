@@ -228,9 +228,17 @@ public class UsbDeviceManager {
         if (usbManager.hasPermission(device)) {
             openDevice(device);
         } else {
-            PendingIntent pi = PendingIntent.getBroadcast(context, 0,
-                new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_MUTABLE);
-            usbManager.requestPermission(device, pi);
+            // Android 14 (targetSdk 34) forbids a MUTABLE PendingIntent wrapping an
+            // implicit intent. USB permission requires MUTABLE (the system injects the
+            // device extra), so make the intent explicit by setting our package.
+            Intent intent = new Intent(ACTION_USB_PERMISSION).setPackage(context.getPackageName());
+            PendingIntent pi = PendingIntent.getBroadcast(context, 0, intent,
+                PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            try {
+                usbManager.requestPermission(device, pi);
+            } catch (Exception e) {
+                mainHandler.post(() -> listener.onError("USB permission request failed: " + e.getMessage()));
+            }
         }
     }
 

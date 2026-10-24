@@ -162,6 +162,8 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, BruceSimActivity.class)));
         findViewById(R.id.btnOpenBoardWeb).setOnClickListener(v ->
             startActivity(new Intent(this, BoardWebActivity.class)));
+        findViewById(R.id.btnOpenProxmark).setOnClickListener(v ->
+            startActivity(new Intent(this, ProxmarkActivity.class)));
 
         setupNfc();
         setupUsb();
@@ -169,8 +171,13 @@ public class MainActivity extends AppCompatActivity {
         updateEmptyView();
         showTab(0);
         handleIntent(getIntent());
-        // Auto-scan for already-connected USB devices on startup
-        scanUsb();
+        // Auto-scan for already-connected USB devices on startup. Guarded so a
+        // USB/permission edge case can never take down the whole app on launch.
+        try {
+            scanUsb();
+        } catch (Exception e) {
+            tvUsbStatus.setText("USB scan error: " + e.getMessage());
+        }
     }
 
     private void showTab(int index) {

@@ -297,6 +297,15 @@
                 android:text="Connect to Board (Web UI)"
                 android:backgroundTint="#006064" />
 
+            <!-- Proxmark3 Easy button -->
+            <Button
+                android:id="@+id/btnOpenProxmark"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:text="Proxmark3 Easy"
+                android:backgroundTint="#1B5E20" />
+
             <!-- BLE Chameleon Ultra card -->
             <androidx.cardview.widget.CardView
                 xmlns:card="http://schemas.android.com/apk/res-auto"
