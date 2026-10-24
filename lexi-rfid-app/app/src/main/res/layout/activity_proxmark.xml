@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0D0D0D">
+
+    <TextView
+        android:id="@+id/tvPmStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1B5E20"
+        android:padding="10dp"
+        android:text="Proxmark3 via Termux — checking…"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:maxLines="3" />
+
+    <!-- pm3 invocation prefix (editable for root vs termux-usb) -->
+    <EditText
+        android:id="@+id/etPmInvoke"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="6dp"
+        android:background="#161616"
+        android:padding="8dp"
+        android:text="pm3 -p /dev/ttyACM0 -c"
+        android:textColor="#80CBC4"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:inputType="text"
+        android:maxLines="1"
+        android:singleLine="true" />
+
+    <!-- command input + run -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/etPmCmd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="type a command, e.g.  hw status"
+            android:textColorHint="#607D8B"
+            android:background="#0D0D0D"
+            android:padding="8dp"
+            android:textColor="#00FF41"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:inputType="text"
+            android:maxLines="1"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/btnPmRun"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="Run"
+            android:backgroundTint="#1B5E20" />
+    </LinearLayout>
+
+    <!-- quick buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <Button
+            android:id="@+id/btnPmCommands"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Command List"
+            android:textSize="12sp"
+            android:backgroundTint="#0F3460" />
+
+        <Button
+            android:id="@+id/btnPmSetup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Setup Help"
+            android:textSize="12sp"
+            android:backgroundTint="#37474F" />
+
+        <Button
+            android:id="@+id/btnPmClear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear"
+            android:textSize="12sp"
+            android:backgroundTint="#37474F" />
+    </LinearLayout>
+
+    <!-- output -->
+    <ScrollView
+        android:id="@+id/svPmOut"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_margin="8dp"
+        android:background="#000000">
+
+        <TextView
+            android:id="@+id/tvPmOut"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:textColor="#00FF41"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true" />
+    </ScrollView>
+</LinearLayout>

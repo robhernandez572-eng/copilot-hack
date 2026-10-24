@@ -135,7 +135,11 @@ public class ChameleonActivity extends AppCompatActivity {
     private void scanAndConnect() {
         List<UsbDevice> devices = usbManager.findSupportedDevices();
         if (devices.isEmpty()) {
-            appendLog("No supported USB device found.\nPlug in your device via USB-C adapter, then tap [Scan USB].");
+            // Fall back to any USB device so an unrecognized LEXI still connects.
+            devices = usbManager.findAllDevices();
+        }
+        if (devices.isEmpty()) {
+            appendLog("No USB device found.\nPlug in your device via USB-C/OTG adapter, then tap [Scan USB].");
             tvDeviceInfo.setText("No device — connect via USB-C adapter");
         } else {
             UsbDevice dev = devices.get(0);
@@ -240,6 +244,7 @@ public class ChameleonActivity extends AppCompatActivity {
             case CHAMELEON_ULTRA: return "Chameleon Ultra";
             case CHAMELEON_MINI:  return "Chameleon Mini";
             case LEXI_RFID:       return "LEXI RFID Device";
+            case PROXMARK3:       return "Proxmark3 Easy";
             case GENERIC_SERIAL:  return "USB Serial Device";
             default:
                 String name = device.getProductName();

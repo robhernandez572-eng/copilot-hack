@@ -38,10 +38,20 @@ public class CardStorage {
                     obj.optString("technology", "Unknown")
                 );
                 card.setName(obj.optString("name", card.getName()));
+                card.setNotes(obj.optString("notes", ""));
+                card.setCategory(obj.optString("category", "General"));
                 cards.add(card);
             }
         } catch (Exception ignored) {}
         return cards;
+    }
+
+    public CardData findByUid(String uid) {
+        if (uid == null) return null;
+        for (CardData card : loadCards()) {
+            if (uid.equals(card.getUid())) return card;
+        }
+        return null;
     }
 
     public void deleteCard(String uid) {
@@ -61,6 +71,8 @@ public class CardStorage {
                 obj.put("cardType", card.getCardType().name());
                 obj.put("technology", card.getTechnology());
                 obj.put("timestamp", card.getTimestamp());
+                obj.put("notes", card.getNotes());
+                obj.put("category", card.getCategory());
                 arr.put(obj);
             }
             prefs.edit().putString(KEY_CARDS, arr.toString()).apply();

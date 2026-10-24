@@ -66,18 +66,39 @@ public class NfcHelper {
         return new CardData(uid, rawData.toString(), cardType, technology);
     }
 
+    /** Read MIFARE Classic with default keys only. */
     private static String readMifare(Tag tag) {
+        return readMifareWithKeys(tag, MifareClassic.KEY_DEFAULT, MifareClassic.KEY_DEFAULT);
+    }
+
+    /**
+     * Read MIFARE Classic with user-supplied Key A and Key B (each 6 bytes).
+     * Falls back to KEY_DEFAULT and KEY_NFC_FORUM if custom keys fail.
+     * Returns formatted sector dump string.
+     */
+    public static String readMifareWithKeys(Tag tag, byte[] customKeyA, byte[] customKeyB) {
         StringBuilder sb = new StringBuilder();
         MifareClassic mifare = MifareClassic.get(tag);
         if (mifare == null) return "Could not open MIFARE";
+        // All key candidates to try in order
+        byte[][] keysA = buildKeyCandidates(customKeyA);
+        byte[][] keysB = buildKeyCandidates(customKeyB);
         try {
             mifare.connect();
             int sectors = mifare.getSectorCount();
             sb.append("Sectors: ").append(sectors).append("\n");
             for (int s = 0; s < Math.min(sectors, 40); s++) {
                 boolean authed = false;
-                try { authed = mifare.authenticateSectorWithKeyA(s, MifareClassic.KEY_DEFAULT); } catch (IOException ignored) {}
-                if (!authed) try { authed = mifare.authenticateSectorWithKeyB(s, MifareClassic.KEY_DEFAULT); } catch (IOException ignored) {}
+                // Try Key A candidates
+                for (byte[] ka : keysA) {
+                    try { if (mifare.authenticateSectorWithKeyA(s, ka)) { authed = true; break; } } catch (IOException ignored) {}
+                }
+                // Try Key B candidates if Key A failed
+                if (!authed) {
+                    for (byte[] kb : keysB) {
+                        try { if (mifare.authenticateSectorWithKeyB(s, kb)) { authed = true; break; } } catch (IOException ignored) {}
+                    }
+                }
                 if (authed) {
                     int blocks = mifare.getBlockCountInSector(s);
                     for (int b = 0; b < blocks; b++) {
@@ -85,10 +106,12 @@ public class NfcHelper {
                         try {
                             byte[] data = mifare.readBlock(blockIdx);
                             sb.append("S").append(s).append("B").append(b).append(": ").append(bytesToHex(data)).append("\n");
-                        } catch (IOException ignored) {}
+                        } catch (IOException ignored) {
+                            sb.append("S").append(s).append("B").append(b).append(": [read error]\n");
+                        }
                     }
                 } else {
-                    sb.append("S").append(s).append(": [auth failed]\n");
+                    sb.append("S").append(s).append(": [auth failed — wrong key?]\n");
                 }
             }
         } catch (IOException e) {
@@ -97,6 +120,25 @@ public class NfcHelper {
             try { mifare.close(); } catch (IOException ignored) {}
         }
         return sb.toString();
+    }
+
+    private static byte[][] buildKeyCandidates(byte[] custom) {
+        return new byte[][]{
+            custom,
+            MifareClassic.KEY_DEFAULT,
+            MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY,
+            MifareClassic.KEY_NFC_FORUM,
+            {(byte)0xA0,(byte)0xA1,(byte)0xA2,(byte)0xA3,(byte)0xA4,(byte)0xA5},
+            {(byte)0xD3,(byte)0xF7,(byte)0xD3,(byte)0xF7,(byte)0xD3,(byte)0xF7},
+        };
+    }
+
+    /** Re-read a tag using custom keys; returns a new CardData with the richer dump. */
+    public static CardData readTagWithCustomKeys(Tag tag, byte[] keyA, byte[] keyB) {
+        byte[] tagId = tag.getId();
+        String uid = bytesToHex(tagId);
+        String raw = readMifareWithKeys(tag, keyA, keyB);
+        return new CardData(uid, raw, CardData.CardType.NFC_MIFARE, "MIFARE Classic");
     }
 
     private static String readNdef(Tag tag) {

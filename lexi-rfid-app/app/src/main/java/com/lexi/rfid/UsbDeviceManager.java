@@ -10,6 +10,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Handler;
 import android.os.Looper;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,6 +43,7 @@ public class UsbDeviceManager {
         CHAMELEON_MINI,
         CHAMELEON_ULTRA,
         LEXI_RFID,
+        PROXMARK3,
         GENERIC_SERIAL,
         UNKNOWN
     }
@@ -82,6 +84,12 @@ public class UsbDeviceManager {
     private static final int VID_ATMEL  = 0x03EB;
     private static final int PID_ATMEL_CDC = 0x2404;
 
+    // ── Proxmark3 (Iceman / RRG firmware; PM3 Easy) — CDC-ACM ──────────────
+    private static final int VID_PROXMARK   = 0x9AC4;
+    private static final int PID_PROXMARK   = 0x4B8F;
+    private static final int VID_PROXMARK_2 = 0x2D2D;  // proxmark.org bootloader
+    private static final int PID_PROXMARK_2 = 0x504D;
+
     private final Context context;
     private final UsbManager usbManager;
     private final UsbListener listener;
@@ -101,6 +109,11 @@ public class UsbDeviceManager {
                     if (dev != null) openDevice(dev);
                 } else {
                     if (dev != null) mainHandler.post(() -> listener.onPermissionDenied(dev));
+                }
+            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (dev != null && classify(dev) != DeviceType.UNKNOWN) {
+                    requestPermissionAndConnect(dev);
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
@@ -122,8 +135,9 @@ public class UsbDeviceManager {
     public void register() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        context.registerReceiver(usbReceiver, filter);
+        ContextCompat.registerReceiver(context, usbReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void unregister() {
@@ -140,6 +154,16 @@ public class UsbDeviceManager {
         return result;
     }
 
+    /** Every USB device the phone currently sees, recognized or not (diagnostic). */
+    public List<UsbDevice> findAllDevices() {
+        return new ArrayList<>(usbManager.getDeviceList().values());
+    }
+
+    /** Force a connection to a device even if classify() didn't recognize it. */
+    public void forceConnect(UsbDevice device) {
+        requestPermissionAndConnect(device);
+    }
+
     /** Classify a USB device by VID/PID and class. Public for use in UI. */
     public DeviceType classify(UsbDevice dev) {
         int vid = dev.getVendorId();
@@ -151,12 +175,21 @@ public class UsbDeviceManager {
             if (pid == PID_CHAMELEON_ULTRA) return DeviceType.CHAMELEON_ULTRA;
         }
 
+        // Proxmark3 (Iceman/RRG firmware, PM3 Easy) by VID/PID
+        if ((vid == VID_PROXMARK && pid == PID_PROXMARK)
+                || (vid == VID_PROXMARK_2 && pid == PID_PROXMARK_2)) {
+            return DeviceType.PROXMARK3;
+        }
+
         // Chameleon by product name (alternate firmware VIDs)
         String name = dev.getProductName();
         if (name != null) {
             String lc = name.toLowerCase();
             if (lc.contains("chameleon")) {
                 return lc.contains("ultra") ? DeviceType.CHAMELEON_ULTRA : DeviceType.CHAMELEON_MINI;
+            }
+            if (lc.contains("proxmark") || lc.contains("pm3")) {
+                return DeviceType.PROXMARK3;
             }
             if (lc.contains("lexi") || lc.contains("rfid") || lc.contains("nfc duplicat")) {
                 return DeviceType.LEXI_RFID;
@@ -195,9 +228,17 @@ public class UsbDeviceManager {
         if (usbManager.hasPermission(device)) {
             openDevice(device);
         } else {
-            PendingIntent pi = PendingIntent.getBroadcast(context, 0,
-                new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_MUTABLE);
-            usbManager.requestPermission(device, pi);
+            // Android 14 (targetSdk 34) forbids a MUTABLE PendingIntent wrapping an
+            // implicit intent. USB permission requires MUTABLE (the system injects the
+            // device extra), so make the intent explicit by setting our package.
+            Intent intent = new Intent(ACTION_USB_PERMISSION).setPackage(context.getPackageName());
+            PendingIntent pi = PendingIntent.getBroadcast(context, 0, intent,
+                PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            try {
+                usbManager.requestPermission(device, pi);
+            } catch (Exception e) {
+                mainHandler.post(() -> listener.onError("USB permission request failed: " + e.getMessage()));
+            }
         }
     }
 
