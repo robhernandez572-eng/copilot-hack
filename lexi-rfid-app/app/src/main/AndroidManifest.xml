@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USB_PERMISSION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Drive the Proxmark3 via the real Iceman client running in Termux -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
     <!-- Bluetooth (legacy API < 31) -->
     <uses-permission android:name="android.permission.BLUETOOTH"
